@@ -1,36 +1,38 @@
 <script>
 	//@ts-ignore
-	import Header from '$lib/components/Header.svelte';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/firebase/firebase.client';
 	import { authStore } from '$lib/stores/authStore';
 	import { browser } from '$app/environment';
 	import Nav from '$lib/components/Nav.svelte';
+	import { goto } from '$app/navigation';
+
+	let isLoggedIn = false;
+
+	$: isLoggedIn = $authStore?.currentUser !== null;
 
 	onMount(() => {
 		const unsubscribe = auth.onAuthStateChanged((user) => {
-			console.log(user);
 			authStore.update((curr) => {
 				return { ...curr, isLoading: false, currentUser: user };
 			});
 
-			if (
-				browser &&
-				!$authStore?.currentUser &&
-				!$authStore.isLoading &&
-				window.location.pathname !== '/'
-			) {
-				window.location.href = '/';
+			if (browser && !user) {
+				// Redirect to sign-in if user is not logged in
+				goto('/signIn');
 			}
 		});
+
 		return unsubscribe;
 	});
 </script>
 
 <div class="app">
 	<div class="flex">
-		<Nav />
+		{#if isLoggedIn}
+			<Nav />
+		{/if}
 
 		<main>
 			<slot></slot>

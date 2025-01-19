@@ -35,6 +35,20 @@
 	<a class="font-bold text-white" href="/about">about</a>
 	<a class="font-bold text-white" href="/signIn">Sign in</a> -->
 
+<script>
+	import { goto } from '$app/navigation';
+	import { authHandlers } from '$lib/stores/authStore';
+	const logout = () => {
+		authHandlers.logout().then(() => {
+			if (typeof window !== 'undefined') {
+				localStorage.removeItem('searchStore');
+				localStorage.removeItem('selectedServices');
+			}
+			goto('/signIn'); // Redirect after cleanup
+		});
+	};
+</script>
+
 <div class="flex h-screen w-[300px] flex-col justify-between bg-[#181625] p-5 text-gray-400">
 	<!-- Top Section -->
 	<div class="space-y-8">
@@ -80,7 +94,7 @@
 		<div>
 			<p class="text-xs uppercase text-gray-500">Activities</p>
 			<nav class="mt-4 space-y-3">
-				<a href="/home" class="flex items-center gap-3 text-white hover:text-purple-500">
+				<a href="/" class="flex items-center gap-3 text-white hover:text-purple-500">
 					<span class="material-icons">🏠</span>
 					Home
 				</a>
@@ -129,7 +143,9 @@
 			/> -->
 			<div>
 				<p class="font-medium text-white">Username</p>
+
 				<a href="/profile" class="text-sm text-purple-500">View Profile</a>
+				<button type="button" on:click={logout} class="text-white">Logout</button>
 			</div>
 		</div>
 	</div>

@@ -1,6 +1,6 @@
 <script>
 	import { authHandlers, authStore } from '$lib/stores/authStore';
-
+	import { goto } from '$app/navigation';
 	let register = false;
 	let email = '';
 	let password = '';
@@ -24,7 +24,7 @@
 			}
 		}
 		if ($authStore.currentUser) {
-			window.location.href = '/privatedashboard';
+			goto('/');
 		}
 	}
 </script>
