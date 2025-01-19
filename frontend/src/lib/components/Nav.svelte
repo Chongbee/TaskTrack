@@ -41,7 +41,7 @@
 		<!-- Logo and Search -->
 		<div>
 			<div class="flex items-center gap-3">
-				<img src="logo-placeholder.svg" alt="TaskTrack Logo" class="h-6 w-6" />
+				<!-- <img src="logo-placeholder.svg" alt="TaskTrack Logo" class="h-6 w-6" /> -->
 				<span class="text-lg font-semibold text-white">TaskTrack</span>
 			</div>
 			<div class="mt-5">
@@ -122,11 +122,11 @@
 	<!-- Bottom Section -->
 	<div>
 		<div class="flex items-center gap-3">
-			<img
+			<!-- <img
 				src="profile-placeholder.jpg"
 				alt="Profile Picture"
 				class="h-10 w-10 rounded-full border-2 border-gray-600"
-			/>
+			/> -->
 			<div>
 				<p class="font-medium text-white">Username</p>
 				<a href="/profile" class="text-sm text-purple-500">View Profile</a>
