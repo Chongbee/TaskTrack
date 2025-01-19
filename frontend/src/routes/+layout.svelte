@@ -1,22 +1,44 @@
 <script>
-	import Header from './Header.svelte';
+	//@ts-ignore
+	import Header from '$lib/components/Header.svelte';
 	import '../app.css';
+	import { onMount } from 'svelte';
+	import { auth } from '$lib/firebase/firebase.client';
+	import { authStore } from '$lib/stores/authStore';
+	import { browser } from '$app/environment';
+	import Nav from '$lib/components/Nav.svelte';
 
-	/** @type {{children: import('svelte').Snippet}} */
-	let { children } = $props();
+	onMount(() => {
+		const unsubscribe = auth.onAuthStateChanged((user) => {
+			console.log(user);
+			authStore.update((curr) => {
+				return { ...curr, isLoading: false, currentUser: user };
+			});
+
+			if (
+				browser &&
+				!$authStore?.currentUser &&
+				!$authStore.isLoading &&
+				window.location.pathname !== '/'
+			) {
+				window.location.href = '/';
+			}
+		});
+		return unsubscribe;
+	});
 </script>
 
 <div class="app">
-	<Header />
+	<div class="flex">
+		<Nav />
 
-	<main>
-		{@render children()}
-	</main>
+		<main>
+			<slot></slot>
+		</main>
+	</div>
 
 	<footer>
-		<p>
-			visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to learn about SvelteKit
-		</p>
+		<p>This is my footer</p>
 	</footer>
 </div>
 
