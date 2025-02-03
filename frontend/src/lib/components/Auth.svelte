@@ -24,7 +24,7 @@
 			}
 		}
 		if ($authStore.currentUser) {
-			goto('/');
+			goto('/stuff');
 		}
 	}
 </script>

@@ -1,5 +1,5 @@
 <script>
-	//@ts-ignore
+	//@ts-nocheck
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/firebase/firebase.client';
@@ -7,34 +7,56 @@
 	import { browser } from '$app/environment';
 	import Nav from '$lib/components/Nav.svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { userHandlers } from '$lib/stores/userStore';
+
+	$: userID = $authStore?.currentUser?.uid;
+
+	const fetchUser = async () => {
+		await userHandlers.getUser(userID);
+	};
 
 	let isLoggedIn = false;
 
 	$: isLoggedIn = $authStore?.currentUser !== null;
 
-	onMount(() => {
+	$: if (userID) {
+		fetchUser();
+	}
+
+	onMount(async () => {
 		const unsubscribe = auth.onAuthStateChanged((user) => {
 			authStore.update((curr) => {
 				return { ...curr, isLoading: false, currentUser: user };
 			});
 
-			if (browser && !user) {
-				// Redirect to sign-in if user is not logged in
-				goto('/signIn');
+			if (browser) {
+				const currentRoute = $page.url.pathname;
+
+				if (!user && currentRoute !== '/newuser') {
+					goto('/signIn');
+				}
 			}
 		});
-
 		return unsubscribe;
 	});
+
+	const handleSignUpRedirect = () => {
+		goto('/newuser');
+	};
 </script>
 
 <div class="app">
 	<div class="flex">
 		{#if isLoggedIn}
 			<Nav />
+		{:else}
+			<div class="auth-buttons">
+				<button on:click={handleSignUpRedirect}>Sign Up</button>
+			</div>
 		{/if}
 
-		<main>
+		<main class="bg-[#F5F6FD]">
 			<slot></slot>
 		</main>
 	</div>
