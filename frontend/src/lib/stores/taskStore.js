@@ -49,14 +49,45 @@ export const taskHandlers = {
 		}
 	},
 
-	// Add a new task
-	createTask: async (taskData) => {
+	getMyTasks: async (taskIds) => {
 		try {
-			const tasksRef = collection(db, 'tasks');
+			if (!Array.isArray(taskIds) || taskIds.length === 0) {
+				console.warn('Invalid user ID or task IDs.');
+				return;
+			}
+
+			const taskPromises = taskIds.map(async (taskId) => {
+				const taskRef = doc(db, `tasks`, taskId);
+				const taskDoc = await getDoc(taskRef);
+				return taskDoc.exists() ? { id: taskDoc.id, ...taskDoc.data() } : null;
+			});
+
+			const tasks = (await Promise.all(taskPromises)).filter((task) => task !== null);
+
+			taskStore.update((state) => ({
+				...state,
+				isLoading: false,
+				tasks
+			}));
+		} catch (error) {
+			console.error('Error fetching tasks:', error);
+		}
+	},
+
+	// Add a new task
+	createTask: async (userId, taskData) => {
+		try {
+			if (!userId) {
+				throw new Error('User ID is missing');
+			}
+			const tasksRef = collection(db, `tasks`);
+			console.log(`Saving task for user: ${userId}`, taskData);
 			const newTaskRef = await addDoc(tasksRef, {
 				...taskData,
 				imageUrls: [] // Initialize with an empty imageUrls array
 			});
+			await taskHandlers.getTasks(userId);
+
 			return newTaskRef.id;
 		} catch (error) {
 			console.error('Error creating task:', error);

@@ -5,7 +5,6 @@ import { addDoc, deleteDoc, updateDoc, getDoc, getDocs, collection, doc } from '
 // import { authStore } from './authStore';
 
 export const userStore = writable({
-	isLoading: true,
 	users: [],
 	currentUser: null,
 	isloading: false
@@ -34,7 +33,7 @@ export const userHandlers = {
 		}
 	},
 
-	addTaskToUser: async (userId, newTask) => {
+	addTaskToUser: async (userId, newTaskId) => {
 		if (!userId) {
 			console.error('addTaskToUser called without a valid userId.');
 			throw new Error('Invalid userId.');
@@ -44,7 +43,7 @@ export const userHandlers = {
 			const userDoc = await getDoc(userRef);
 			if (userDoc.exists()) {
 				const userData = userDoc.data();
-				const updatedTasks = [...(userData.tasks || []), newTask];
+				const updatedTasks = [...(userData.tasks || []), newTaskId];
 				await updateDoc(userRef, { tasks: updatedTasks });
 
 				// Update the userStore with the updated tasks

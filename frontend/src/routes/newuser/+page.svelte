@@ -2,38 +2,68 @@
 	// @ts-nocheck
 	import { userHandlers, userStore } from '$lib/stores/userStore';
 	import { authStore } from '$lib/stores/authStore';
-	import AddTask from '$lib/components/AddTask.svelte'; // Import the new AddTask component
+	import AddTask from '$lib/components/AddTask.svelte';
+	import { taskHandlers, taskStore } from '$lib/stores/taskStore';
 
-	let userID = null;
+	let userId = null;
 	let userData = null;
 	let myTasks = [];
+	let myTasksData = null;
 
-	// Subscribe to the auth and user store
+	// Subscribe to auth store
 	authStore.subscribe((curr) => {
-		userID = curr?.currentUser?.uid;
+		userId = curr?.currentUser?.uid;
+		if (userId) {
+			userHandlers.getUser(userId); // Fetch user data if logged in
+		}
 	});
 
+	// Subscribe to user store
 	userStore.subscribe((curr) => {
 		userData = curr?.currentUser;
 		myTasks = curr?.currentUser?.tasks || [];
 	});
 
+	// Fetch tasks for user when myTasks changes
+	$: if (myTasks.length > 0) {
+		taskHandlers.getMyTasks(myTasks);
+	}
+
+	// Subscribe to task store and grab tasks
+	taskStore.subscribe((curr) => {
+		myTasksData = curr?.tasks;
+		console.log('tasks', myTasksData);
+	});
+
 	// Group tasks by date
 	let groupedTasks = {};
 
-	// Update grouped tasks whenever myTasks changes
+	// Group tasks by the date part of 'createdAt'
 	$: {
-		groupedTasks = myTasks.reduce((acc, task) => {
-			const taskDate = task.setDate; // Use the setDate to group
-			if (!acc[taskDate]) {
-				acc[taskDate] = [];
-			}
-			acc[taskDate].push(task);
-			return acc;
-		}, {});
-	}
-	const date = new Date();
+		if (Array.isArray(myTasksData) && myTasksData.length > 0) {
+			groupedTasks = myTasksData.reduce((acc, task) => {
+				if (task.taskStartDate) {
+					// Extract YYYY-MM-DD format for grouping
+					const taskDate = new Date(task.taskStartDate).toISOString().split('T')[0];
 
+					if (!acc[taskDate]) {
+						acc[taskDate] = [];
+					}
+					acc[taskDate].push(task);
+				}
+				return acc;
+			}, {});
+
+			console.log('groupedTasks', groupedTasks);
+		}
+	}
+
+	function formatDate(dateString) {
+		const date = new Date(dateString);
+		return `${date.toLocaleString('en-US', { weekday: 'short' })}, ${date.getDate()} of ${date.toLocaleString('en-US', { month: 'short' })}`;
+	}
+
+	const date = new Date();
 	const formattedDate = `${date.toLocaleString('en-US', { weekday: 'long' })}, ${date.getDate()} of ${date.toLocaleString('en-US', { month: 'long' })}, ${date.getFullYear()}`;
 </script>
 
@@ -43,7 +73,7 @@
 		<div class="text-sm font-bold text-gray-500">{formattedDate}</div>
 	</div>
 </div>
-<!-- Task Input Form (Add Task Component) -->
+
 <div class="flex w-full items-center justify-between">
 	<div class="text-xl font-bold text-black">Home</div>
 	<div class="flex items-center gap-3">
@@ -55,22 +85,30 @@
 	</div>
 </div>
 
-<!-- Grouped Task List -->
 <div class="flex w-full gap-5">
-	<div class="flex w-1/3 flex-col gap-4">
+	{#if Object.keys(groupedTasks).length > 0}
 		{#each Object.keys(groupedTasks) as date (date)}
-			<div class="mb-1">
-				<h2 class="mb-2 text-lg font-bold">{date}</h2>
-				{#each groupedTasks[date] as task}
-					<div class="mb-1 rounded-md bg-white p-2 shadow">
-						<h3 class="text-lg font-semibold">{task.title}</h3>
-						<p class="text-sm text-gray-600">{task.description}</p>
-						<p class="text-sm text-gray-500">
-							{task.setDate} at {task.setTime} | {task.priority} Priority
-						</p>
-					</div>
-				{/each}
+			<div class="flex w-1/3 flex-col gap-4 rounded-md bg-white p-3 shadow">
+				<div class="mb-1 flex flex-col gap-2 px-2">
+					<h2 class="mb-2 text-sm font-bold text-black">{formatDate(date)}</h2>
+					{#each groupedTasks[date] as task (task.id)}
+						<div class="mb-1 rounded-md bg-[#F5F6FD] p-2 shadow">
+							<div class="border-l-2 border-red-600 px-2">
+								<h3 class="text-lg font-semibold">{task.title || 'Untitled Task'}</h3>
+								<p class="text-sm text-gray-600">
+									{task.description || 'No description provided.'}
+								</p>
+								<p class="text-sm text-gray-500">
+									{task.taskStartTime ? `at ${task.taskStartTime}` : 'No time'} | {task.priority ||
+										'No'} Priority
+								</p>
+							</div>
+						</div>
+					{/each}
+				</div>
 			</div>
 		{/each}
-	</div>
+	{:else}
+		<p class="text-gray-500">No tasks available.</p>
+	{/if}
 </div>

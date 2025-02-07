@@ -1,63 +1,66 @@
 <script>
 	// @ts-nocheck
 	import { taskHandlers } from '$lib/stores/taskStore.js';
-	import { userStore } from '$lib/stores/userStore.js'; // Assuming you have a user store
+	import { userHandlers, userStore } from '$lib/stores/userStore.js';
 	import { writable } from 'svelte/store';
 	import { onMount } from 'svelte';
 	import { Button, Modal } from 'flowbite-svelte';
+	import { authStore } from '$lib/stores/authStore';
 
 	let clickOutsideModal = false;
 	let newTask = {
 		title: '',
 		description: '',
 		completed: false,
-		taskCategory: 'General',
+		taskCategory: 'Home',
 		priority: 'Low',
 		taskStartTime: '',
+		taskStartDate: '',
 		taskDuration: '',
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
-		frequency: '',
-		reminders: '',
-		images: []
+		frequency: 'None',
+		reminders: ''
 	};
 
-	// Local state for form validation and loading state
 	let isLoading = false;
 	let taskId = '';
 
-	const user = $userStore; // Assuming you have the user data loaded in userStore
+	let user = null;
+	userStore.subscribe((curr) => {
+		user = curr?.currentUser;
+	});
 
-	// Handle the task form submission
 	const addTask = async () => {
+		console.log('hello world');
+		if (!user) {
+			alert('You need to be logged in to add a task.');
+			return;
+		}
+
 		isLoading = true;
+
 		try {
-			// Step 1: Create the task using the taskHandlers
-			taskId = await taskHandlers.createTask(newTask);
+			// Create the task and get the new task ID
+			const taskId = await taskHandlers.createTask(user.uid, newTask);
+			console.log(taskId, newTask);
+			// Update user store with the new task
+			userHandlers.addTaskToUser(user.uid, taskId);
 
-			// Step 2: Add the task ID to the user's task list in userStore
-			if (user && user.tasks) {
-				user.tasks.push(taskId); // Add the new task ID to the user's task list
-				userStore.update((store) => ({
-					...store,
-					tasks: [...store.tasks] // Update the userStore with the new list of tasks
-				}));
-			}
-
-			// Step 3: Clear the form after adding the task
+			// Reset the task form
 			newTask = {
 				title: '',
 				description: '',
 				completed: false,
-				taskCategory: 'General',
+				taskCategory: 'Home',
 				priority: 'Low',
 				taskStartTime: '',
+				taskStartDate: '',
 				taskDuration: '',
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
-				frequency: '',
-				reminders: '',
-				images: []
+				frequency: 'None',
+				reminders: ''
 			};
 
 			alert('Task added successfully!');
@@ -70,77 +73,156 @@
 	};
 </script>
 
+<!-- Add Task Button -->
 <button
-	class="rounded-3xl bg-[#7262D1] px-5 py-2 text-sm text-white"
-	type="button"
-	on:click={() => (clickOutsideModal = true)}>+ Add task</button
+	class="rounded-full bg-[#7262D1] px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#5b4bcf]"
+	on:click={() => (clickOutsideModal = true)}
 >
+	+ Add task
+</button>
 
 <Modal title="Add new task" bind:open={clickOutsideModal} autoclose outsideclose>
-	<!-- Task Add Form -->
-	<div class="p-4">
-		<h2 class="mb-4 text-xl font-semibold">Add new Task</h2>
+	<div class="mx-auto w-full max-w-[400px] rounded-2xl bg-white p-6 shadow-lg">
+		<h2 class="mb-4 text-xl font-bold text-gray-900">Add New Task</h2>
 
-		<form on:submit|preventDefault={addTask}>
-			<div class="mb-4">
-				<label for="title" class="block text-sm font-medium">Task Title</label>
+		<form class="space-y-4">
+			<!-- Activity Type -->
+			<div>
+				<label for="activity-type" class="block text-sm font-medium text-gray-600"
+					>Choose activity type</label
+				>
+				<select
+					bind:value={newTask.taskCategory}
+					class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				>
+					<option value="Home">🏠 Home</option>
+					<option value="Work">💼 Work</option>
+					<option value="Sport">🏋️‍♂️ Sport</option>
+					<option value="Personal">👤 Personal</option>
+					<option value="Courses">📚 Courses</option>
+				</select>
+			</div>
+
+			<!-- Task Title -->
+			<div>
 				<input
-					id="title"
 					type="text"
+					placeholder="Task title"
 					bind:value={newTask.title}
-					class="mt-1 w-full rounded border border-gray-300 p-2"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
 					required
 				/>
 			</div>
 
-			<div class="mb-4">
-				<label for="description" class="block text-sm font-medium">Task Description</label>
+			<!-- Task Description -->
+			<div>
 				<textarea
-					id="description"
+					placeholder="Task description"
 					bind:value={newTask.description}
-					class="mt-1 w-full rounded border border-gray-300 p-2"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
 					required
 				></textarea>
 			</div>
 
-			<div class="mb-4">
-				<label for="priority" class="block text-sm font-medium">Priority</label>
-				<select
-					id="priority"
-					bind:value={newTask.priority}
-					class="mt-1 w-full rounded border border-gray-300 p-2"
+			<!-- Priority -->
+			<div>
+				<label for="priority" class="block text-sm font-medium text-gray-600">Set Priority</label>
+				<div class="flex gap-2">
+					<button
+						type="button"
+						class="rounded-full px-4 py-2 text-sm font-medium"
+						class:selected={newTask.priority === 'High'}
+						on:click={() => (newTask.priority = 'High')}
+					>
+						High
+					</button>
+					<button
+						type="button"
+						class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+						class:selected={newTask.priority === 'Medium'}
+						on:click={() => (newTask.priority = 'Medium')}
+					>
+						Med
+					</button>
+					<button
+						type="button"
+						class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100"
+						class:selected={newTask.priority === 'Low'}
+						on:click={() => (newTask.priority = 'Low')}
+					>
+						Low
+					</button>
+				</div>
+			</div>
+
+			<!-- Set Date -->
+			<div>
+				<label for="date" class="block text-sm font-medium text-gray-600">📅 Set date</label>
+				<input
+					type="date"
+					bind:value={newTask.taskStartDate}
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				/>
+			</div>
+
+			<!-- Set Time -->
+			<div>
+				<label for="time" class="block text-sm font-medium text-gray-600">🕐 Set time</label>
+				<input
+					type="time"
+					bind:value={newTask.taskStartTime}
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				/>
+			</div>
+
+			<!-- Duration -->
+			<div>
+				<label for="duration" class="block text-sm font-medium text-gray-600">⏳ Set duration</label
 				>
-					<option value="Low">Low</option>
-					<option value="Medium">Medium</option>
-					<option value="High">High</option>
+				<input
+					type="text"
+					bind:value={newTask.taskDuration}
+					placeholder="1 h"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				/>
+			</div>
+
+			<!-- Frequency -->
+			<div>
+				<label for="frequency" class="block text-sm font-medium text-gray-600">🌔 Frequency</label>
+				<select
+					bind:value={newTask.frequency}
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				>
+					<option value="None">None</option>
+					<option value="Daily">Daily</option>
+					<option value="Weekly">Weekly</option>
+					<option value="Bi-weekly">Bi-weekly</option>
 				</select>
 			</div>
 
-			<!-- Add other fields for taskCategory, frequency, etc., similarly -->
-			<div class="mb-4">
-				<label for="taskCategory" class="block text-sm font-medium">Category</label>
+			<!-- Reminders -->
+			<div>
+				<label for="reminders" class="block text-sm font-medium text-gray-600">⏰ Reminders</label>
 				<select
-					id="taskCategory"
-					bind:value={newTask.taskCategory}
-					class="mt-1 w-full rounded border border-gray-300 p-2"
+					bind:value={newTask.reminders}
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
 				>
-					<option value="General">General</option>
-					<option value="Work">Work</option>
-					<option value="Sport">Sport</option>
-					<option value="Personal">Personal</option>
-					<option value="Courses">Courses</option>
+					<option value="Before 10 min">Before 10 min</option>
+					<option value="Before 30 min">Before 30 min</option>
+					<option value="Before 60 min">Before 60 min</option>
 				</select>
 			</div>
 
-			<!-- Additional form fields for taskStartTime, taskDuration, etc. -->
-
-			<div class="mb-4">
+			<!-- Add Task Button -->
+			<div class="mt-4 flex justify-center">
 				<button
-					type="submit"
-					class="rounded bg-blue-500 px-4 py-2 text-white disabled:bg-gray-400"
+					on:click={addTask}
+					type="button"
+					class="w-full rounded-2xl bg-[#7262D1] py-3 font-semibold text-white transition hover:bg-[#5b4bcf]"
 					disabled={isLoading}
 				>
-					{isLoading ? 'Adding Task...' : 'Add Task'}
+					{isLoading ? 'Adding Task...' : 'Add task'}
 				</button>
 			</div>
 		</form>
