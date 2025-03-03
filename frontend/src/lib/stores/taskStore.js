@@ -86,6 +86,7 @@ export const taskHandlers = {
 				...taskData,
 				imageUrls: [] // Initialize with an empty imageUrls array
 			});
+			await taskHandlers.updateTask(newTaskRef.id, { ...taskData, id: newTaskRef.id });
 			await taskHandlers.getTasks(userId);
 
 			return newTaskRef.id;
