@@ -11,6 +11,13 @@
 
 	let showTaskModal = false;
 	let showDurationModal = false;
+	let showPopup = false; // Control popup visibility
+	let popupTimeout; // Handle popup auto-dismiss
+	let remainingTime = 5; // Timer for popup countdown
+	let interval;
+	let isLoading = false; // ✅ FIX: Declare isLoading here
+	let customDuration = '00:00'; // ✅ Fix: Declare customDuration
+	let selectedDuration = ''; // Holds selected template duration
 
 	let newTask = {
 		title: '',
@@ -27,55 +34,63 @@
 		reminders: ''
 	};
 
-	let customDuration = '00:00'; // Store the custom duration
-	let isLoading = false;
-	let taskId = '';
-	let selectedDuration = ''; // Holds selected template duration
-
-	// Function to handle selecting predefined durations
-	const setDuration = (duration) => {
-		if (selectedDuration === duration) {
-			selectedDuration = ''; // Deselect if the same duration is clicked
-			customDuration = '00:00'; // Reset to default if deselected
-			newTask.taskDuration = ''; // Clear task duration
-		} else {
-			selectedDuration = duration;
-			customDuration = duration; // Update customDuration to match the selected template
-			newTask.taskDuration = duration; // Set task duration with template
-		}
-		showDurationModal = true; // Ensure the modal is shown when a duration is selected
-	};
-
-	// Function to handle hours input change
-	const handleCustomHoursChange = (event) => {
-		let hours = event.target.value;
-		// Limit hours to a maximum of 12, ensure the value is a valid number
-		hours = Math.min(Math.max(hours, 0), 12); // Ensures hours stay within 0-12
-		// Ensure hours are always two digits
-		hours = String(hours).padStart(2, '0');
-		const [_, minutes] = customDuration.split(':');
-		customDuration = `${hours}:${String(minutes).padStart(2, '0')}`;
-	};
-	// Function to handle minutes input change
-	const handleCustomMinutesChange = (event) => {
-		let minutes = event.target.value;
-		// Limit minutes to a maximum of 59, ensure the value is a valid number
-		minutes = Math.min(Math.max(minutes, 0), 59); // Ensures minutes stay within 0-59
-		// Ensure minutes are always two digits
-		minutes = String(minutes).padStart(2, '0');
-		const [hours, _] = customDuration.split(':');
-		customDuration = `${String(hours).padStart(2, '0')}:${minutes}`;
-	};
-	// Function to save the duration and close modal
-	const saveDuration = () => {
-		newTask.taskDuration = selectedDuration || customDuration; // Use selected or custom duration
-		showDurationModal = false; // Close the duration modal
-	};
-
 	let user = null;
+	let lastAddedTaskId = null; // Store last task ID for undo
+
 	userStore.subscribe((curr) => {
 		user = curr?.currentUser;
 	});
+
+	const setDuration = (time) => {
+		let hours = 0;
+		let minutes = 0;
+
+		if (time.includes('h')) {
+			// Handle hours (e.g., "1 h", "2 h")
+			hours = parseInt(time.split(' ')[0], 10);
+		} else if (time.includes('m')) {
+			// Handle minutes (e.g., "5 m", "10 m")
+			minutes = parseInt(time.split(' ')[0], 10);
+		}
+
+		// Convert to HH:mm format
+		newTask.taskDuration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+		selectedDuration = time; // Store the selected duration in the variable
+	};
+	// Function to trigger popup
+	const triggerPopup = (taskId) => {
+		lastAddedTaskId = taskId;
+		showPopup = true;
+		remainingTime = 5;
+
+		// Clear existing timers
+		clearTimeout(popupTimeout);
+		clearInterval(interval);
+
+		// Start countdown timer
+		interval = setInterval(() => {
+			remainingTime--;
+			if (remainingTime <= 0) {
+				clearInterval(interval);
+				showPopup = false;
+			}
+		}, 1000);
+
+		// Auto-hide popup after 5 seconds
+		popupTimeout = setTimeout(() => {
+			showPopup = false;
+		}, 5000);
+	};
+
+	// Function to undo task addition
+	const undoTaskAddition = async () => {
+		if (lastAddedTaskId && user) {
+			await taskHandlers.deleteTask(user.uid, lastAddedTaskId);
+			lastAddedTaskId = null;
+			showPopup = false;
+			clearInterval(interval);
+		}
+	};
 
 	// Function to add task
 	const addTask = async () => {
@@ -84,12 +99,11 @@
 			return;
 		}
 
-		isLoading = true;
-
 		try {
-			// Create the task and get the new task ID
-			const taskId = await taskHandlers.createTask(user.uid, newTask);
-			// Update user store with the new task
+			const taskId = await taskHandlers.createTask(user.uid, {
+				...newTask,
+				taskStartDate: newTask.taskStartDate || new Date().toISOString() // Ensure date is included
+			});
 			userHandlers.addTaskToUser(user.uid, taskId);
 
 			// Reset the task form
@@ -100,7 +114,7 @@
 				taskCategory: 'Home',
 				priority: 'Low',
 				taskStartTime: '',
-				taskStartDate: '',
+				taskStartDate: '', // Reset date field
 				taskDuration: '',
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
@@ -108,16 +122,74 @@
 				reminders: ''
 			};
 
-			alert('Task added successfully!');
-			showTaskModal = false; // Close modal after adding task
+			showTaskModal = false;
+			triggerPopup(taskId);
 		} catch (error) {
 			console.error('Error adding task:', error);
 			alert('Failed to add task.');
-		} finally {
-			isLoading = false;
 		}
 	};
+	// Function to handle hours input change
+	const handleCustomHoursChange = (event) => {
+		let hours = event.target.value;
+		hours = Math.min(Math.max(hours, 0), 12); // Limit to 0-12
+		hours = String(hours).padStart(2, '0');
+		const [_, minutes] = customDuration.split(':');
+		customDuration = `${hours}:${String(minutes).padStart(2, '0')}`;
+	};
+
+	// Function to handle minutes input change
+	const handleCustomMinutesChange = (event) => {
+		let minutes = event.target.value;
+		minutes = Math.min(Math.max(minutes, 0), 59); // Limit to 0-59
+		minutes = String(minutes).padStart(2, '0');
+		const [hours, _] = customDuration.split(':');
+		customDuration = `${String(hours).padStart(2, '0')}:${minutes}`;
+	};
+	const saveDuration = () => {
+		if (selectedDuration) {
+			// If a template duration is selected, use the converted format
+			newTask.taskDuration = newTask.taskDuration; // Already in HH:mm format
+		} else {
+			// If a custom duration is entered, use it directly
+			newTask.taskDuration = customDuration;
+		}
+		showDurationModal = false; // Close the duration modal
+	};
 </script>
+
+<!-- Popup Notification -->
+{#if showPopup}
+	<div class="popup-container">
+		<span class="message">Task added successfully</span>
+		<div class="actions">
+			<!-- Circular countdown container -->
+			<div class="countdown-circle-container relative flex items-center justify-center">
+				<!-- Static Circle Border -->
+				<div
+					class="countdown-circle absolute h-full w-full rounded-full border-4 border-gray-300"
+				></div>
+
+				<!-- Animated Progress Circle -->
+				<div
+					class="countdown-progress absolute h-full w-full rounded-full border-4 border-[#7262D1]"
+					style="background: conic-gradient(#7262D1 0% {remainingTime *
+						20}%, #e0e0e0 {remainingTime * 20}% 100%);"
+				></div>
+
+				<!-- Timer Text (no "s") -->
+				<span class="timer absolute text-lg font-bold">{remainingTime}</span>
+			</div>
+			<button
+				class="w-auto rounded-full bg-[#7262D1] px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#5b4bcf]"
+				on:click={undoTaskAddition}>Undo</button
+			>
+			<button class="close-btn" on:click={() => (showPopup = false)}>
+				<Close class="h-5 w-5" />
+			</button>
+		</div>
+	</div>
+{/if}
 
 <!-- Add Task Button -->
 <button
@@ -157,8 +229,8 @@
 						<button
 							type="button"
 							class="rounded-full px-4 py-2 text-sm font-medium"
-							class:bg-gray-500={newTask.taskDuration === time}
-							class:bg-gray-200={newTask.taskDuration !== time}
+							class:bg-gray-500={selectedDuration === time}
+							class:bg-gray-200={selectedDuration !== time}
 							on:click={() => setDuration(time)}
 						>
 							{time}
@@ -247,6 +319,7 @@
 			<form class="space-y-4">
 				<!-- Activity Type -->
 				<div class="flex items-center justify-between">
+					<!-- svelte-ignore a11y_label_has_associated_control -->
 					<label class="text-sm font-medium text-gray-600" style="font-weight: bold;"
 						>Choose activity type</label
 					>
@@ -282,6 +355,7 @@
 
 				<!-- Priority -->
 				<div>
+					<!-- svelte-ignore a11y_label_has_associated_control -->
 					<label class="block text-sm font-medium text-gray-600">Set Priority</label>
 					<div class="flex gap-2">
 						<!-- High Priority Button -->
@@ -327,6 +401,7 @@
 				/>
 
 				<!-- Set Time -->
+				<!-- svelte-ignore a11y_label_has_associated_control -->
 				<label class="block text-sm font-medium text-gray-600">Start Time</label>
 				<input
 					type="time"
@@ -388,5 +463,93 @@
 
 	input[type='number'] {
 		-moz-appearance: textfield;
+	}
+	.popup-container {
+		position: fixed;
+		bottom: 1rem;
+		left: 1rem;
+		background: white;
+		padding: 1rem;
+		border-radius: 8px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		animation: fadeIn 0.3s ease-out;
+	}
+
+	.countdown-circle-container {
+		position: relative;
+		width: 50px;
+		height: 50px;
+	}
+
+	.countdown-circle {
+		border-color: #dcdcdc;
+		border-radius: 50%;
+	}
+
+	.countdown-progress {
+		background: conic-gradient(#7262d1 0% 0%, #e0e0e0 0% 100%);
+		transition: background 1s linear; /* Smooth transition for the countdown animation */
+	}
+
+	.message {
+		font-size: 1rem;
+		color: black;
+	}
+
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.timer {
+		font-size: 1rem;
+		font-weight: bold;
+		color: gray;
+		position: absolute;
+	}
+
+	.undo-btn {
+		background: #7262d1;
+		color: white;
+		border: none;
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		font-weight: bold;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background 0.2s ease-in-out;
+	}
+
+	.undo-btn:hover {
+		background: #5b4bcf;
+	}
+
+	.close-btn {
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		color: gray;
+	}
+
+	.close-btn:hover {
+		color: black;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 </style>

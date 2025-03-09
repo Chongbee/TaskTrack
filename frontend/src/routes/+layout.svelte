@@ -46,13 +46,13 @@
 	};
 </script>
 
-<div class="app">
+<div class="app h-screen w-screen">
 	<div class="flex">
 		{#if isLoggedIn}
 			<Nav />
 		{:else}
 			<div class="auth-buttons">
-				<button on:click={handleSignUpRedirect}>Sign Up</button>
+				<button on:click={handleSignUpRedirect}></button>
 			</div>
 		{/if}
 
@@ -60,17 +60,22 @@
 			<slot></slot>
 		</main>
 	</div>
-
-	<footer>
-		<p>This is my footer</p>
-	</footer>
 </div>
 
 <style>
+	/* Reset margin and padding on the body */
+	body {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+
 	.app {
 		display: flex;
 		flex-direction: column;
 		min-height: 100vh;
+		width: 100%;
+		background-color: #f5f6fd; /* Ensure background color matches your main content */
 	}
 
 	main {

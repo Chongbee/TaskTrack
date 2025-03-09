@@ -19,7 +19,13 @@ export const taskHandlers = {
 			const tasksRef = collection(db, 'tasks');
 			const snapshot = await getDocs(tasksRef);
 			const tasks = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-			taskStore.set({ isLoading: false, tasks });
+
+			// Sort tasks by taskStartDate
+			const sortedTasks = tasks.sort((a, b) => {
+				return new Date(a.taskStartDate) - new Date(b.taskStartDate);
+			});
+
+			taskStore.set({ isLoading: false, tasks: sortedTasks });
 		} catch (error) {
 			console.error('Error fetching tasks:', error);
 		}
@@ -64,10 +70,15 @@ export const taskHandlers = {
 
 			const tasks = (await Promise.all(taskPromises)).filter((task) => task !== null);
 
+			// Sort tasks by taskStartDate
+			const sortedTasks = tasks.sort((a, b) => {
+				return new Date(a.taskStartDate) - new Date(b.taskStartDate);
+			});
+
 			taskStore.update((state) => ({
 				...state,
 				isLoading: false,
-				tasks
+				tasks: sortedTasks
 			}));
 		} catch (error) {
 			console.error('Error fetching tasks:', error);
@@ -122,6 +133,16 @@ export const taskHandlers = {
 		try {
 			const taskRef = doc(db, 'tasks', taskId);
 			await updateDoc(taskRef, taskData);
+
+			// Update the store directly
+			taskStore.update((state) => {
+				const updatedTasks = state.tasks.map((task) =>
+					task.id === taskId ? { ...task, ...taskData } : task
+				);
+
+				return { ...state, tasks: updatedTasks };
+			});
+
 			return taskId;
 		} catch (error) {
 			console.error('Error updating task:', error);

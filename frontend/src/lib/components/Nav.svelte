@@ -54,8 +54,8 @@
 	<div class="space-y-8">
 		<!-- Logo and Search -->
 		<div>
-			<div class="flex items-center gap-3">
-				<!-- <img src="logo-placeholder.svg" alt="TaskTrack Logo" class="h-6 w-6" /> -->
+			<div class="flex items-center gap-1">
+				<img src="tttlogo.png" alt="TaskTrack Logo" class="h-8 w-8" />
 				<span class="text-lg font-semibold text-white">TaskTrack</span>
 			</div>
 			<div class="mt-5">
