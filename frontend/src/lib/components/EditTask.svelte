@@ -146,7 +146,7 @@
 <!-- Popup Notification -->
 {#if showPopup}
 	<div class="popup-container">
-		<span class="message">Task added successfully</span>
+		<span class="message">Task updated successfully</span>
 		<div class="actions">
 			<!-- Circular countdown container -->
 			<div class="countdown-circle-container relative flex items-center justify-center">
@@ -299,7 +299,7 @@
 				</button>
 			</div>
 
-			<h2 class="text-medium mb-4 font-bold text-gray-400">Add New Task</h2>
+			<h2 class="text-medium mb-4 font-bold text-gray-400">Edit Current Task</h2>
 
 			<form class="space-y-4">
 				<!-- Activity Type -->
@@ -428,7 +428,7 @@
 					class="w-full rounded-2xl bg-[#7262D1] py-3 font-semibold text-white transition hover:bg-[#5b4bcf]"
 					disabled={isLoading}
 				>
-					{isLoading ? 'Adding Task...' : 'Add task'}
+					{isLoading ? 'Adding Task...' : 'Edit Task'}
 				</button>
 			</form>
 		</div>

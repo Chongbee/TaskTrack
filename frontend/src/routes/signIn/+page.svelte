@@ -77,6 +77,8 @@
 			</form>
 
 			<!-- Toggle Login/Register -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="mt-4 cursor-pointer text-center text-gray-400"
 				on:click={() => (register = !register)}

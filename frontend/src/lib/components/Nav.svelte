@@ -1,43 +1,35 @@
-<!-- <script>
-</script>
-
-<div class="flex h-screen w-[300px] flex-col justify-between gap-5 bg-[#181625] p-5">
-	<div>
-		<p>this is my nav</p>
-		<p>Search</p>
-		<p>Useful</p>
-		<div class="flex flex-col gap-5">
-			<a class="font-bold text-white" href="/about">Dashboard</a>
-			<a class="font-bold text-white" href="/about">Productivity</a>
-			<a class="font-bold text-white" href="/about">Inbox</a>
-			<a class="font-bold text-white" href="/about">Calendar</a>
-		</div>
-		<p>Activities</p>
-		<div class="flex flex-col gap-5">
-			<a class="font-bold text-white" href="/about">Home</a>
-			<a class="font-bold text-white" href="/about">Work</a>
-			<a class="font-bold text-white" href="/about">Sport</a>
-			<a class="font-bold text-white" href="/about">Personal</a>
-			<a class="font-bold text-white" href="/about">Courses</a>
-		</div>
-		<p>General</p>
-		<div class="flex flex-col gap-5">
-			<a class="font-bold text-white" href="/about">Settings</a>
-			<a class="font-bold text-white" href="/about">Help</a>
-		</div>
-	</div>
-	<div>
-		<p>profile</p>
-	</div>
-</div> -->
-
-<!-- <a class="font-bold text-white" href="/">home</a>
-	<a class="font-bold text-white" href="/about">about</a>
-	<a class="font-bold text-white" href="/signIn">Sign in</a> -->
-
 <script>
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { authHandlers } from '$lib/stores/authStore';
+	import { authStore, authHandlers } from '$lib/stores/authStore';
+	import Arrow from '$lib/icons/Arrow.svelte';
+	import Barchart from '$lib/icons/Barchart.svelte';
+	import Dashboard from '$lib/icons/Dashboard.svelte';
+	import Inbox from '$lib/icons/Inbox.svelte';
+	import Calender from '$lib/icons/Calender.svelte';
+	import Home from '$lib/icons/Home.svelte';
+	import Work from '$lib/icons/Work.svelte';
+	import Sport from '$lib/icons/Sport.svelte';
+	import Personal from '$lib/icons/Personal.svelte';
+	import Courses from '$lib/icons/Courses.svelte';
+	import Settings from '$lib/icons/Settings.svelte';
+	import Help from '$lib/icons/Help.svelte';
+
+	let displayName = ''; // Store the user's displayName
+	let profileImage = ''; // Store the user's profile picture
+	let isDropdownOpen = false; // Control dropdown visibility
+
+	// Fetch user data on mount
+	onMount(() => {
+		authStore.subscribe((state) => {
+			if (state.currentUser) {
+				displayName = state.currentUser.displayName || 'Username'; // Default to "Username" if displayName is not set
+				profileImage = state.currentUser.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg'; // Default profile picture
+			}
+		});
+	});
+
+	// Logout function
 	const logout = () => {
 		authHandlers.logout().then(() => {
 			if (typeof window !== 'undefined') {
@@ -47,6 +39,11 @@
 			goto('/signIn'); // Redirect after cleanup
 		});
 	};
+
+	// Toggle dropdown visibility
+	function toggleDropdown() {
+		isDropdownOpen = !isDropdownOpen;
+	}
 </script>
 
 <div class="flex h-screen w-[300px] flex-col justify-between bg-[#181625] p-5 text-gray-400">
@@ -72,19 +69,19 @@
 			<p class="text-xs uppercase text-gray-500">Useful</p>
 			<nav class="mt-4 space-y-3">
 				<a href="/dashboard" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">🤳</span>
+					<span class="material-icons"><Dashboard /></span>
 					Dashboard
 				</a>
 				<a href="/productivity" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">🎂</span>
+					<span class="material-icons"><Barchart /></span>
 					Productivity
 				</a>
 				<a href="/inbox" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">😊</span>
+					<span class="material-icons"><Inbox /></span>
 					Inbox <span class="ml-auto text-sm text-red-500">99+</span>
 				</a>
 				<a href="/calendar" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">📅</span>
+					<span class="material-icons"><Calender /></span>
 					Calendar
 				</a>
 			</nav>
@@ -95,23 +92,23 @@
 			<p class="text-xs uppercase text-gray-500">Activities</p>
 			<nav class="mt-4 space-y-3">
 				<a href="/" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">🏠</span>
+					<span class="material-icons"><Home /></span>
 					Home
 				</a>
 				<a href="/work" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">💪</span>
+					<span class="material-icons"><Work /></span>
 					Work
 				</a>
 				<a href="/sport" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">👷‍♀️</span>
+					<span class="material-icons"><Sport /></span>
 					Sport
 				</a>
 				<a href="/personal" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">🧔</span>
+					<span class="material-icons"><Personal /></span>
 					Personal
 				</a>
 				<a href="/courses" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">🏫</span>
+					<span class="material-icons"><Courses /></span>
 					Courses
 				</a>
 			</nav>
@@ -122,11 +119,11 @@
 			<p class="text-xs uppercase text-gray-500">General</p>
 			<nav class="mt-4 space-y-3">
 				<a href="/settings" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">☸</span>
+					<span class="material-icons"><Settings /></span>
 					Settings
 				</a>
 				<a href="/help" class="flex items-center gap-3 text-white hover:text-purple-500">
-					<span class="material-icons">🆘</span>
+					<span class="material-icons"><Help /></span>
 					Help
 				</a>
 			</nav>
@@ -135,17 +132,35 @@
 
 	<!-- Bottom Section -->
 	<div>
-		<div class="flex items-center gap-3">
-			<!-- <img
-				src="profile-placeholder.jpg"
-				alt="Profile Picture"
-				class="h-10 w-10 rounded-full border-2 border-gray-600"
-			/> -->
-			<div>
-				<p class="font-medium text-white">Username</p>
+		<!-- White Line Separator -->
+		<div class="my-4 border-t border-gray-600"></div>
 
-				<a href="/profile" class="text-sm text-purple-500">View Profile</a>
-				<button type="button" on:click={logout} class="text-white">Logout</button>
+		<!-- Profile Section -->
+		<div class="flex items-center gap-3">
+			<!-- Profile Picture -->
+			<img src={profileImage} alt="Profile Picture" class="h-10 w-10 rounded-full object-cover" />
+
+			<!-- Display Name and Dropdown -->
+			<div class="relative flex-1">
+				<button
+					on:click={toggleDropdown}
+					class="flex w-full items-center justify-between text-white hover:text-purple-500"
+				>
+					<span class="font-medium">{displayName}</span>
+					<span class="material-icons"><Arrow /></span>
+				</button>
+
+				<!-- Dropdown Menu -->
+				{#if isDropdownOpen}
+					<div class="absolute left-0 top-full mt-2 w-40 rounded-md bg-[#2A2836] shadow-lg">
+						<button
+							on:click={logout}
+							class="block w-full px-4 py-2 text-left text-sm text-white hover:bg-[#5042A5]"
+						>
+							Logout
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

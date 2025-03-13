@@ -11,6 +11,7 @@
 	import List from '$lib/icons/List.svelte';
 	import { getWeekDateRange } from '$lib/utils/utils';
 	import EditTask from '$lib/components/EditTask.svelte';
+	import { clickOutside } from '$lib/utils/clickOutside.js'; // Custom action to close on outside click
 
 	let userId = null;
 	let userData = null;
@@ -18,7 +19,7 @@
 	let myTasksData = null;
 	let showOptionsForTask = null; // to track which task's options are shown
 	let viewMode = writable('day'); // 'day' or 'week'
-
+	let dropdownRef;
 	let viewStyle = writable('default');
 
 	// Subscribe to auth store
@@ -323,20 +324,13 @@
 
 									{#if showOptionsForTask === task.id}
 										<!-- Want to be able to click anywhere outside of the options and it will close -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
 										<div
-											on:mouseleave={(showOptionsForTask = null)}
-											class="absolute right-0 z-10 mt-2 w-32 rounded-md bg-white shadow-lg"
+											bind:this={dropdownRef}
+											use:clickOutside={() => (showOptionsForTask = null)}
+											class="absolute right-0 z-50 mt-2 w-32 rounded-md bg-white shadow-lg"
 										>
 											<ul>
-												<!-- 												
-												<li>
-													<button
-														class="w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
-														on:click={() => editTask(task.id)}
-													>
-														Edit
-													</button>
-												</li> -->
 												<li>
 													<EditTask newTask={task} customDuration={task.taskDuration} />
 												</li>
@@ -420,19 +414,20 @@
 										<DotsVertical />
 									</button>
 									{#if showOptionsForTask === task.id}
-										<div class="absolute right-0 z-10 mt-2 w-32 rounded-md bg-white shadow-lg">
+										<!-- Want to be able to click anywhere outside of the options and it will close -->
+										<!-- svelte-ignore a11y_no_static_element_interactions -->
+										<div
+											bind:this={dropdownRef}
+											use:clickOutside={() => (showOptionsForTask = null)}
+											class="absolute right-0 z-50 mt-2 w-32 rounded-md bg-white shadow-lg"
+										>
 											<ul>
 												<li>
-													<button
-														class="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
-														on:click={() => editTask(task.id)}
-													>
-														Edit
-													</button>
+													<EditTask newTask={task} customDuration={task.taskDuration} />
 												</li>
 												<li>
 													<button
-														class="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+														class="w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
 														on:click={() => deleteTask(task.id)}
 													>
 														Delete
@@ -471,19 +466,29 @@
 											<DotsVertical />
 										</button>
 										{#if showOptionsForTask === task.id}
-											<div class="absolute right-0 z-10 mt-2 w-32 rounded-md bg-white shadow-lg">
+											<!-- Want to be able to click anywhere outside of the options and it will close -->
+											<!-- svelte-ignore a11y_no_static_element_interactions -->
+											<div
+												bind:this={dropdownRef}
+												use:clickOutside={() => (showOptionsForTask = null)}
+												class="absolute right-0 top-full z-50 mt-2 w-32 rounded-md bg-white shadow-lg"
+											>
 												<ul>
+													<!-- 												
+												<li>
+													<button
+														class="w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+														on:click={() => editTask(task.id)}
+													>
+														Edit
+													</button>
+												</li> -->
 													<li>
-														<button
-															class="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
-															on:click={() => editTask(task.id)}
-														>
-															Edit
-														</button>
+														<EditTask newTask={task} customDuration={task.taskDuration} />
 													</li>
 													<li>
 														<button
-															class="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+															class="w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
 															on:click={() => deleteTask(task.id)}
 														>
 															Delete
@@ -563,19 +568,29 @@
 											<DotsVertical />
 										</button>
 										{#if showOptionsForTask === task.id}
-											<div class="absolute right-0 z-10 mt-2 w-32 rounded-md bg-white shadow-lg">
+											<!-- Want to be able to click anywhere outside of the options and it will close -->
+											<!-- svelte-ignore a11y_no_static_element_interactions -->
+											<div
+												bind:this={dropdownRef}
+												use:clickOutside={() => (showOptionsForTask = null)}
+												class="absolute right-0 top-full z-50 mt-2 w-32 rounded-md bg-white shadow-lg"
+											>
 												<ul>
+													<!-- 												
+												<li>
+													<button
+														class="w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+														on:click={() => editTask(task.id)}
+													>
+														Edit
+													</button>
+												</li> -->
 													<li>
-														<button
-															class="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
-															on:click={() => editTask(task.id)}
-														>
-															Edit
-														</button>
+														<EditTask newTask={task} customDuration={task.taskDuration} />
 													</li>
 													<li>
 														<button
-															class="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
+															class="w-full cursor-pointer px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-100"
 															on:click={() => deleteTask(task.id)}
 														>
 															Delete
