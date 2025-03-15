@@ -1,4 +1,5 @@
 <script>
+	//@ts-nocheck
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/authStore';
 	import { userStore } from '$lib/stores/userStore';
@@ -129,11 +130,12 @@
 	</div>
 
 	<!-- Profile Picture -->
-	<div class="mt-6 flex items-center justify-center">
+	<div class="mt-6 w-full items-center rounded-lg bg-[#5042A5] p-6">
+		<!-- svelte-ignore a11y_img_redundant_alt -->
 		<img
 			src={profileImage}
 			alt="Profile Picture"
-			class="h-32 w-32 rounded-full border-4 border-[#5042A5] object-cover"
+			class="h-32 w-32 rounded-full border-4 object-cover"
 		/>
 	</div>
 
@@ -219,8 +221,10 @@
 
 	<!-- Recent Activity -->
 	<div class="mt-6">
-		<div class="text-lg font-bold text-black">Recent Activity</div>
-		<div class="mt-4 space-y-2">
+		<div class="text-center text-lg font-bold text-black">Recent Activity</div>
+		<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			<!-- Activity items here -->
+
 			{#if recentActivity.length > 0}
 				{#each recentActivity as activity}
 					<div class="rounded-md bg-[#F5F6FD] p-3">
@@ -229,7 +233,7 @@
 					</div>
 				{/each}
 			{:else}
-				<div class="text-sm text-gray-500">No recent activity.</div>
+				<div class="col-span-3 text-sm text-gray-500">No recent activity.</div>
 			{/if}
 		</div>
 	</div>

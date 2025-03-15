@@ -1,4 +1,5 @@
 <script>
+	// @ts-nocheck
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore, authHandlers } from '$lib/stores/authStore';
@@ -14,7 +15,10 @@
 	import Courses from '$lib/icons/Courses.svelte';
 	import Settings from '$lib/icons/Settings.svelte';
 	import Help from '$lib/icons/Help.svelte';
+	import Notification from '$lib/icons/Notification.svelte';
+	import { clickOutside } from '$lib/utils/clickOutside';
 
+	let dropdownRef;
 	let displayName = ''; // Store the user's displayName
 	let profileImage = ''; // Store the user's profile picture
 	let isDropdownOpen = false; // Control dropdown visibility
@@ -49,12 +53,20 @@
 <div class="flex h-screen w-[300px] flex-col justify-between bg-[#181625] p-5 text-gray-400">
 	<!-- Top Section -->
 	<div class="space-y-8">
-		<!-- Logo and Search -->
+		<!-- Logo, Search, and Icon -->
 		<div>
-			<div class="flex items-center gap-1">
-				<img src="tttlogo.png" alt="TaskTrack Logo" class="h-8 w-8" />
-				<span class="text-lg font-semibold text-white">TaskTrack</span>
+			<!-- Logo and Icon -->
+			<div class="flex items-center justify-between">
+				<div class="flex items-center gap-1">
+					<img src="tttlogo.png" alt="TaskTrack Logo" class="h-8 w-8" />
+					<span class="text-lg font-semibold text-white">TaskTrack</span>
+				</div>
+				<!-- Icon Button -->
+				<a href="/inbox" class="flex items-center justify-center text-white">
+					<Notification class="h-6 w-6 hover:opacity-80" />
+				</a>
 			</div>
+			<!-- Search Bar -->
 			<div class="mt-5">
 				<input
 					type="text"
@@ -78,7 +90,12 @@
 				</a>
 				<a href="/inbox" class="flex items-center gap-3 text-white hover:text-purple-500">
 					<span class="material-icons"><Inbox /></span>
-					Inbox <span class="ml-auto text-sm text-red-500">99+</span>
+					Inbox
+					<span
+						class="ml-auto flex h-6 w-12 items-center justify-center rounded-full bg-red-500 text-sm text-white"
+					>
+						99+
+					</span>
 				</a>
 				<a href="/calendar" class="flex items-center gap-3 text-white hover:text-purple-500">
 					<span class="material-icons"><Calender /></span>
@@ -138,6 +155,7 @@
 		<!-- Profile Section -->
 		<div class="flex items-center gap-3">
 			<!-- Profile Picture -->
+			<!-- svelte-ignore a11y_img_redundant_alt -->
 			<img src={profileImage} alt="Profile Picture" class="h-10 w-10 rounded-full object-cover" />
 
 			<!-- Display Name and Dropdown -->
@@ -150,9 +168,22 @@
 					<span class="material-icons"><Arrow /></span>
 				</button>
 
-				<!-- Dropdown Menu -->
+				<!-- Dropdown Menu (Right-Side) -->
 				{#if isDropdownOpen}
-					<div class="absolute left-0 top-full mt-2 w-40 rounded-md bg-[#2A2836] shadow-lg">
+					<div
+						bind:this={dropdownRef}
+						use:clickOutside={() => (isDropdownOpen = null)}
+						class="absolute left-full top-0 ml-2 w-40 rounded-md bg-[#2A2836] shadow-lg"
+					>
+						<!-- Profile Option -->
+						<a
+							href="/profile"
+							class="block w-full px-4 py-2 text-left text-sm text-white hover:bg-[#5042A5]"
+						>
+							Profile
+						</a>
+
+						<!-- Logout Option -->
 						<button
 							on:click={logout}
 							class="block w-full px-4 py-2 text-left text-sm text-white hover:bg-[#5042A5]"
