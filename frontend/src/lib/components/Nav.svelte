@@ -164,7 +164,7 @@
 					on:click={toggleDropdown}
 					class="flex w-full items-center justify-between text-white hover:text-purple-500"
 				>
-					<span class="font-medium">{displayName}</span>
+					<span class="whitespace-nowrap font-medium">{displayName}</span>
 					<span class="material-icons"><Arrow /></span>
 				</button>
 
@@ -173,7 +173,7 @@
 					<div
 						bind:this={dropdownRef}
 						use:clickOutside={() => (isDropdownOpen = null)}
-						class="absolute left-full top-0 ml-2 w-40 rounded-md bg-[#2A2836] shadow-lg"
+						class="absolute bottom-0 left-full ml-2 w-40 rounded-md bg-[#2A2836] shadow-lg"
 					>
 						<!-- Profile Option -->
 						<a

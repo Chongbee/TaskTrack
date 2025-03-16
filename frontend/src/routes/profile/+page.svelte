@@ -6,6 +6,7 @@
 	import { taskStore, taskHandlers } from '$lib/stores/taskStore';
 	import { goto } from '$app/navigation'; // Use SvelteKit's goto
 	import DotsVertical from '$lib/icons/DotsVertical.svelte';
+	import Completed from '$lib/icons/Completed.svelte';
 	// User data
 	let name = '';
 	let email = '';
@@ -162,12 +163,35 @@
 		</div>
 	</div>
 
+	<!-- Horizontal Separator -->
+	<hr class="my-6 border-t border-gray-200" />
+
 	<!-- Task Statistics with Completion Progress Bar -->
 	<div class="mt-6">
-		<div class="text-lg font-bold text-black">Task Progress</div>
+		<div class="flex items-center gap-2">
+			<!-- Icon (you can use any icon library or custom SVG) -->
+			<svg
+				class="h-6 w-6 text-[#5042A5]"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
+			</svg>
+			<div class="text-lg font-bold text-black">Task Progress</div>
+		</div>
 		<div class="mt-2">
 			<div class="flex justify-between text-sm font-bold text-gray-500">
-				<span>Completed</span>
+				<span class="inline-flex items-center gap-1">
+					<span>Completed</span>
+					<Completed />
+				</span>
 				<span>{completionPercentage}%</span>
 			</div>
 			<div class="mt-1 h-3 w-full rounded-full bg-gray-200">
@@ -178,7 +202,6 @@
 			</div>
 		</div>
 	</div>
-
 	<!-- Functional Calendar -->
 	<div class="mt-6 rounded-md bg-white p-4 shadow">
 		<div class="flex items-center justify-between">

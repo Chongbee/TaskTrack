@@ -290,7 +290,7 @@
 				class="scroll-snap-align-start flex w-1/3 flex-shrink-0 flex-col gap-4 rounded-md bg-white p-3 shadow"
 			>
 				<!-- Card Content -->
-				<div class="mb-1 flex flex-col gap-2 px-2">
+				<div class="mb-1 flex flex-col gap-2 overflow-visible px-2">
 					<h2 class="mb-2 text-sm font-bold text-black">
 						{formatDate(date)}
 						<span

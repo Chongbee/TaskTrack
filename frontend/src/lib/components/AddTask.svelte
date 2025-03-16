@@ -8,6 +8,12 @@
 	import { authStore } from '$lib/stores/authStore';
 	import Template from '$lib/icons/Template.svelte';
 	import Close from '$lib/icons/Close.svelte';
+	import Frequency from '$lib/icons/Frequency.svelte';
+	import Clock from '$lib/icons/Clock.svelte';
+	import Calender from '$lib/icons/Calender.svelte';
+	import Alarm from '$lib/icons/Alarm.svelte';
+	import Flag from '$lib/icons/Flag.svelte';
+	import Hourglass from '$lib/icons/Hourglass.svelte';
 
 	let showTaskModal = false;
 	let showDurationModal = false;
@@ -315,7 +321,7 @@
 			</div>
 
 			<h2 class="text-medium mb-4 font-bold text-gray-400">Add New Task</h2>
-
+			<hr class="my-6 border-t border-gray-200" />
 			<form class="space-y-4">
 				<!-- Activity Type -->
 				<div class="flex items-center justify-between">
@@ -356,7 +362,12 @@
 				<!-- Priority -->
 				<div>
 					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label class="block text-sm font-medium text-gray-600">Set Priority</label>
+					<label class="block text-sm font-medium text-gray-600">
+						<div class="flex items-center gap-2">
+							<Flag class="h-4 w-4 text-gray-600" />
+							<span>Set priority</span>
+						</div>
+					</label>
 					<div class="flex gap-2">
 						<!-- High Priority Button -->
 						<button
@@ -394,6 +405,12 @@
 				</div>
 
 				<!-- Set Date -->
+				<label class="block text-sm font-medium text-gray-600">
+					<div class="flex items-center gap-2">
+						<Calender class="h-4 w-4 text-gray-600" />
+						<span>Set date</span>
+					</div>
+				</label>
 				<input
 					type="date"
 					bind:value={newTask.taskStartDate}
@@ -402,7 +419,12 @@
 
 				<!-- Set Time -->
 				<!-- svelte-ignore a11y_label_has_associated_control -->
-				<label class="block text-sm font-medium text-gray-600">Start Time</label>
+				<label class="block text-sm font-medium text-gray-600">
+					<div class="flex items-center gap-2">
+						<Clock class="h-4 w-4 text-gray-600" />
+						<span>Start time</span>
+					</div>
+				</label>
 				<input
 					type="time"
 					bind:value={newTask.taskStartTime}
@@ -414,11 +436,20 @@
 					type="button"
 					class="rounded-full bg-gray-200 px-4 py-2 text-sm font-medium"
 					on:click={() => (showDurationModal = true)}
-				>
-					Set Duration
+					><div class="flex items-center gap-2">
+						<Hourglass class="h-4 w-4 text-gray-600" />
+						Set Duration
+					</div>
 				</button>
 
 				<!-- Frequency -->
+				<label class="block text-sm font-medium text-gray-600">
+					<div class="flex items-center gap-2">
+						<Frequency class="h-4 w-4 text-gray-600" />
+						<span>Frequency</span>
+					</div>
+				</label>
+
 				<select
 					bind:value={newTask.frequency}
 					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -430,6 +461,13 @@
 				</select>
 
 				<!-- Reminders -->
+
+				<label class="block text-sm font-medium text-gray-600">
+					<div class="flex items-center gap-2">
+						<Alarm class="h-4 w-4 text-gray-600" />
+						<span>Reminders</span>
+					</div>
+				</label>
 				<select
 					bind:value={newTask.reminders}
 					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
