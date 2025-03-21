@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore, authHandlers } from '$lib/stores/authStore';
+	import { notificationStore, notificationHandlers } from '$lib/stores/notificationStore';
 	import Arrow from '$lib/icons/Arrow.svelte';
 	import Barchart from '$lib/icons/Barchart.svelte';
 	import Dashboard from '$lib/icons/Dashboard.svelte';
@@ -22,13 +23,21 @@
 	let displayName = ''; // Store the user's displayName
 	let profileImage = ''; // Store the user's profile picture
 	let isDropdownOpen = false; // Control dropdown visibility
+	let notificationCount = 0; // Store the number of notifications
 
-	// Fetch user data on mount
+	// Fetch user data and notifications on mount
 	onMount(() => {
-		authStore.subscribe((state) => {
-			if (state.currentUser) {
-				displayName = state.currentUser.displayName || 'Username'; // Default to "Username" if displayName is not set
-				profileImage = state.currentUser.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg'; // Default profile picture
+		authStore.subscribe((auth) => {
+			if (auth.currentUser) {
+				displayName = auth.currentUser.displayName || 'Username'; // Default to "Username" if displayName is not set
+				profileImage = auth.currentUser.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg'; // Default profile picture
+
+				// Fetch notifications for the current user
+				notificationHandlers.getNotifications(auth.currentUser.uid).then(() => {
+					notificationStore.subscribe((state) => {
+						notificationCount = state.notifications.filter((n) => !n.viewed).length; // Update the notification count
+					});
+				});
 			}
 		});
 	});
@@ -62,8 +71,11 @@
 					<span class="text-lg font-semibold text-white">TaskTrack</span>
 				</div>
 				<!-- Icon Button -->
-				<a href="/inbox" class="flex items-center justify-center text-white">
+				<a href="/inbox" class="relative flex items-center justify-center text-white">
 					<Notification class="h-6 w-6 hover:opacity-80" />
+					{#if notificationCount > 0}
+						<span class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500"></span>
+					{/if}
 				</a>
 			</div>
 			<!-- Search Bar -->
@@ -91,11 +103,13 @@
 				<a href="/inbox" class="flex items-center gap-3 text-white hover:text-purple-500">
 					<span class="material-icons"><Inbox /></span>
 					Inbox
-					<span
-						class="ml-auto flex h-6 w-12 items-center justify-center rounded-full bg-red-500 text-sm text-white"
-					>
-						99+
-					</span>
+					{#if notificationCount > 0}
+						<span
+							class="ml-auto flex h-6 w-12 items-center justify-center rounded-full bg-red-500 text-sm text-white"
+						>
+							{notificationCount > 99 ? '99+' : notificationCount}
+						</span>
+					{/if}
 				</a>
 				<a href="/calendar" class="flex items-center gap-3 text-white hover:text-purple-500">
 					<span class="material-icons"><Calender /></span>

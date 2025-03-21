@@ -5,22 +5,20 @@
 	import { authStore } from '$lib/stores/authStore';
 	import AddTask from '$lib/components/AddTask.svelte';
 	import { taskHandlers, taskStore } from '$lib/stores/taskStore';
-	import DotsVertical from '$lib/icons/DotsVertical.svelte';
-	import Clock from '$lib/icons/Clock.svelte';
 	import { writable } from 'svelte/store';
-	import Grid from '$lib/icons/Grid.svelte';
-	import List from '$lib/icons/List.svelte';
 	import { getWeekDateRange } from '$lib/utils/utils';
-	import EditTask from '$lib/components/EditTask.svelte';
 	import { clickOutside } from '$lib/utils/clickOutside.js'; // Custom action to close on outside click
+	import TaskCard from '$lib/components/TaskCard.svelte';
+	import ViewModeToggle from '$lib/components/ViewModeToggle.svelte';
+	import DateHeader from '$lib/components/DateHeader.svelte';
+	import TaskDropdown from '$lib/components/TaskDropdown.svelte';
+	import SnapX from '$lib/components/SnapX.svelte';
+	import Header from '$lib/components/Header.svelte';
 
 	let userId = null;
 	let userData = null;
 	let myTasks = [];
 	let myTasksData = null;
-	// Instead of storing a task id for which the options are open,
-	// we now store an object with the active task and its computed dropdown style.
-	let activeDropdown = null;
 	let viewMode = writable('day'); // 'day' or 'week'
 	let viewStyle = writable('default');
 
@@ -54,7 +52,7 @@
 	$: {
 		if (Array.isArray(myTasksData) && myTasksData.length > 0) {
 			groupedTasks = myTasksData.reduce((acc, task) => {
-				if (task.taskStartDate) {
+				if (task.taskStartDate && task.taskCategory === 'Work') {
 					const taskDate = new Date(task.taskStartDate).toISOString().split('T')[0];
 					if (!acc[taskDate]) {
 						acc[taskDate] = [];
@@ -78,12 +76,14 @@
 	$: {
 		if (Array.isArray(myTasksData) && myTasksData.length > 0) {
 			groupedTasksByWeek = myTasksData.reduce((acc, task) => {
-				const taskDate = new Date(task.taskStartDate);
-				const weekNumber = getWeekNumber(taskDate);
-				if (!acc[weekNumber]) {
-					acc[weekNumber] = [];
+				if (task.taskCategory === 'Work') {
+					const taskDate = new Date(task.taskStartDate);
+					const weekNumber = getWeekNumber(taskDate);
+					if (!acc[weekNumber]) {
+						acc[weekNumber] = [];
+					}
+					acc[weekNumber].push(task);
 				}
-				acc[weekNumber].push(task);
 				return acc;
 			}, {});
 		}
@@ -94,38 +94,11 @@
 		return `${date.toLocaleString('en-US', { weekday: 'short' })}, ${date.getDate()} of ${date.toLocaleString('en-US', { month: 'short' })}`;
 	}
 
-	function getPriorityIndicator(priority) {
-		const size = 'w-3 h-1.5';
-		switch (priority) {
-			case 'High':
-				return `
-				<div class="bg-red-600 ${size}"></div>
-				<div class="bg-red-600 ${size}"></div>
-				<div class="bg-red-600 ${size}"></div>
-			`;
-			case 'Medium':
-				return `
-				<div class="bg-yellow-500 ${size}"></div>
-				<div class="bg-yellow-500 ${size}"></div>
-				<div class="bg-gray-300 ${size}"></div>
-			`;
-			case 'Low':
-				return `
-				<div class="bg-green-600 ${size}"></div>
-				<div class="bg-gray-300 ${size}"></div>
-				<div class="bg-gray-300 ${size}"></div>
-			`;
-			default:
-				return '';
-		}
-	}
-
 	let isDragging = false;
 	let startX, scrollLeft;
 	let scrollContainer;
 
 	function startDrag(e) {
-		// Prevent dragging if the clicked element is part of the dashboard
 		if (e.target.closest('.dashboard')) return;
 		isDragging = true;
 		startX = e.pageX;
@@ -143,24 +116,11 @@
 		const walk = (x - startX) * 1; // Adjust the multiplier for faster/slower scrolling
 		scrollContainer.scrollLeft = scrollLeft - walk;
 	}
-
-	async function toggleTaskCompletion(task) {
-		// Update task completion in Firebase
-		await taskHandlers.updateTask(task.id, { completed: task.completed });
-	}
-
-	const date = new Date();
-	const formattedDate = `${date.toLocaleString('en-US', { weekday: 'long' })}, ${date.getDate()} of ${date.toLocaleString('en-US', { month: 'long' })}, ${date.getFullYear()}`;
-
-	// Instead of a simple toggle based on id, this function computes the button’s position
-	// and sets activeDropdown with the task and its computed style.
 	function toggleOptions(task, event) {
-		// If the dropdown is already open for this task, close it.
 		if (activeDropdown && activeDropdown.task.id === task.id) {
 			activeDropdown = null;
 		} else {
 			const rect = event.currentTarget.getBoundingClientRect();
-			// Adjust values as needed – here we position the dropdown just below the button.
 			activeDropdown = {
 				task,
 				style: `position: fixed; top: ${rect.bottom + 4}px; left: ${rect.left}px; width: 8rem;`
@@ -168,101 +128,22 @@
 		}
 	}
 
-	function formatDuration(duration) {
-		if (!duration) return '';
-		let hours = 0;
-		let minutes = 0;
-		if (duration.includes(':')) {
-			// Handle HH:mm format
-			[hours, minutes] = duration.split(':').map(Number);
-		} else if (duration.includes('h') || duration.includes('m')) {
-			// Handle template durations (e.g., "1 h", "30 m")
-			if (duration.includes('h')) {
-				hours = parseInt(duration.split(' ')[0], 10);
-			}
-			if (duration.includes('m')) {
-				minutes = parseInt(duration.split(' ')[0], 10);
-			}
-		}
-		let formattedDuration = '';
-		if (hours > 0) {
-			formattedDuration += `${hours} h`;
-		}
-		if (minutes > 0) {
-			if (formattedDuration) formattedDuration += ' ';
-			formattedDuration += `${minutes} min`;
-		}
-		return `(${formattedDuration})`;
-	}
+	let activeDropdown = null;
 
-	$: {
-		if (Array.isArray(myTasksData) && myTasksData.length > 0) {
-			groupedTasksByWeek = myTasksData.reduce((acc, task) => {
-				const taskDate = new Date(task.taskStartDate);
-				const weekNumber = getWeekNumber(taskDate);
-				if (!acc[weekNumber]) {
-					acc[weekNumber] = [];
-				}
-				acc[weekNumber].push(task);
-				return acc;
-			}, {});
-		}
-	}
-
-	// Function to toggle view mode
 	function toggleViewMode(mode) {
 		viewMode.set(mode);
 	}
 </script>
 
-<div class="flex w-full items-center justify-between">
-	<div class="text-md font-bold text-black">My Activities</div>
-	<div class="flex items-center gap-3">
-		<div class="text-sm font-bold text-gray-500">{formattedDate}</div>
-	</div>
+<div class="flex w-full min-w-[200px] flex-wrap items-center justify-between gap-2">
+	<Header />
 </div>
 
 <div class="flex w-full items-center justify-between p-2">
 	<div class="text-xl font-bold text-black">Work</div>
 	<div class="flex items-center gap-3">
 		<!-- Day/Week Toggle -->
-		<div class="flex items-center rounded-full bg-gray-200 p-0 shadow-md">
-			<button
-				on:click={() => viewMode.set('day')}
-				class="rounded-full px-5 py-2 text-sm font-semibold transition-all {$viewMode === 'day'
-					? 'bg-[#868698] text-white shadow'
-					: 'text-gray-500'}"
-			>
-				Day
-			</button>
-			<button
-				on:click={() => viewMode.set('week')}
-				class="rounded-full px-5 py-2 text-sm font-semibold transition-all {$viewMode === 'week'
-					? 'bg-[#868698] text-white shadow'
-					: 'text-gray-500'}"
-			>
-				Week
-			</button>
-		</div>
-		<div class="flex items-center rounded-full bg-gray-200 p-0 shadow-md">
-			<button
-				on:click={() => viewStyle.set('default')}
-				class="rounded-full px-5 py-2 text-sm font-semibold transition-all {$viewStyle === 'default'
-					? 'bg-[#868698] text-white shadow'
-					: 'text-gray-500'}"
-			>
-				<List />
-			</button>
-			<button
-				on:click={() => viewStyle.set('condensed')}
-				class="rounded-full px-5 py-2 text-sm font-semibold transition-all {$viewStyle ===
-				'condensed'
-					? 'bg-[#868698] text-white shadow'
-					: 'text-gray-500'}"
-			>
-				<Grid />
-			</button>
-		</div>
+		<ViewModeToggle {viewMode} {viewStyle} />
 
 		<div>
 			<AddTask />
@@ -270,241 +151,51 @@
 	</div>
 </div>
 
-<!-- Horizontal scroll container.
-     We use Tailwind’s snap-x, snap-mandatory, overflow-x-auto, scroll-smooth, select-none, and no-scrollbar classes.
-     (Note: The drag events below still enable smooth, custom scrolling.) -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
-	bind:this={scrollContainer}
-	on:mousedown={startDrag}
-	on:mousemove={doDrag}
-	on:mouseup={stopDrag}
-	on:mouseleave={stopDrag}
-	role="region"
-	tabindex="-1"
-	aria-label="Horizontal scrollable task cards"
-	class="no-scrollbar flex w-full select-none snap-x snap-mandatory gap-5 overflow-x-auto overflow-y-visible scroll-smooth"
->
+<!-- Horizontal scroll container -->
+<SnapX bind:scrollContainer {startDrag} {doDrag} {stopDrag}>
 	{#if $viewMode === 'day' && Object.keys(groupedTasks).length > 0}
 		{#each Object.keys(groupedTasks) as date (date)}
-			{#if groupedTasks[date] && groupedTasks[date].some((task) => task.taskCategory === 'Work')}
-				<div
-					class="relative flex w-1/3 flex-shrink-0 snap-start flex-col gap-4 rounded-md bg-white p-3 shadow"
-				>
-					<!-- Card Content -->
-					<div class="mb-1 flex flex-col gap-2 px-2">
-						<h2 class="mb-2 text-sm font-bold text-black">
-							{formatDate(date)}
-							<span
-								class="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full {groupedTasks[
-									date
-								].every((task) => task.completed)
-									? 'bg-white'
-									: 'bg-[#F5F6FD]'} text-xs font-semibold text-gray-500"
-							>
-								{groupedTasks[date].length}
-							</span>
-						</h2>
+			<div
+				class="relative flex w-1/3 flex-shrink-0 snap-start flex-col gap-4 rounded-md bg-white p-3 shadow"
+			>
+				<div class="mb-1 flex flex-col gap-2 px-2">
+					<DateHeader
+						{date}
+						taskCount={groupedTasks[date].length}
+						allTasksCompleted={groupedTasks[date].every((task) => task.completed)}
+					/>
 
-						{#each groupedTasks[date].filter((task) => task.taskCategory === 'Work') as task (task.id)}
-							{#if $viewStyle === 'default'}
-								<!-- Default Task View -->
-								<div
-									class="relative mb-1 flex rounded-md p-2 shadow {task.completed
-										? 'bg-white'
-										: 'bg-[#F5F6FD]'}"
-								>
-									<div class="absolute right-1 top-2">
-										<button
-											on:click={(e) => toggleOptions(task, e)}
-											class="h-5 w-5 text-gray-500 hover:text-gray-800"
-											aria-label="Open task options"
-										>
-											<DotsVertical />
-										</button>
-									</div>
-
-									<div class="flex items-center gap-2 border-l-2 border-red-600 px-2">
-										<input
-											type="checkbox"
-											bind:checked={task.completed}
-											on:change={() => toggleTaskCompletion(task)}
-											class="h-4 w-4 appearance-none rounded-sm border-none bg-[#E2DCFD] outline-none checked:bg-[#5042A5] focus:ring-0"
-										/>
-
-										<div class="flex-grow">
-											<h3 class="text-lg font-semibold">{task.title || 'Untitled Task'}</h3>
-											<p class="text-sm text-gray-600">
-												{task.description || 'No description provided.'}
-											</p>
-											<p class="text-sm text-gray-500">
-												<span class="flex gap-1">
-													{@html getPriorityIndicator(task.priority)}
-												</span>
-											</p>
-										</div>
-									</div>
-
-									{#if task.taskStartTime}
-										<span
-											class="absolute bottom-2 right-2 flex items-center gap-1 text-xs text-gray-500"
-										>
-											<Clock class="h-3 w-3" />
-											{task.taskStartTime}
-											{formatDuration(task.taskDuration)}
-										</span>
-									{/if}
-								</div>
-							{:else}
-								<!-- Condensed Task View -->
-								<div class="relative mb-1 flex items-center bg-white">
-									<input
-										type="checkbox"
-										bind:checked={task.completed}
-										on:change={() => toggleTaskCompletion(task)}
-										class="h-4 w-4 appearance-none rounded-sm border-none bg-[#E2DCFD] outline-none checked:bg-[#5042A5] focus:ring-0"
-									/>
-									<div class="ml-2 flex-grow">
-										<h3 class="text-lg font-semibold">{task.title || 'Untitled Task'}</h3>
-									</div>
-
-									{#if task.taskStartTime}
-										<span class="ml-2 flex items-center gap-1 text-xs text-gray-500">
-											<Clock class="h-3 w-3" />
-											{task.taskStartTime}
-											{formatDuration(task.taskDuration)}
-										</span>
-									{/if}
-									<div class="ml-2">
-										<button
-											on:click={(e) => toggleOptions(task, e)}
-											class="h-5 w-5 text-gray-500 hover:text-gray-800"
-										>
-											<DotsVertical />
-										</button>
-									</div>
-								</div>
-							{/if}
-						{/each}
-					</div>
+					{#each groupedTasks[date] as task (task.id)}
+						<TaskCard {task} viewStyle={$viewStyle} {toggleOptions} {activeDropdown} />
+					{/each}
 				</div>
-			{/if}
+			</div>
 		{/each}
 	{:else if $viewMode === 'week' && Object.keys(groupedTasksByWeek).length > 0}
 		<div class="flex h-[calc(100vh-200px)] flex-col flex-wrap gap-4">
 			{#each Object.keys(groupedTasksByWeek) as week (week)}
-				{#if groupedTasksByWeek[week] && groupedTasksByWeek[week].some((task) => task.taskCategory === 'Work')}
-					<div class="flex w-full flex-col gap-4 rounded-md bg-white p-3 shadow">
-						<h2 class="mb-2 text-sm font-bold text-black">Week {week}: {getWeekDateRange(week)}</h2>
-						<div class="flex flex-col gap-2">
-							{#each groupedTasksByWeek[week].filter((task) => task.taskCategory === 'Work') as task (task.id)}
-								{#if $viewStyle === 'default'}
-									<!-- Default Task View -->
-									<div
-										class="relative mb-1 flex rounded-md p-2 shadow {task.completed
-											? 'bg-white'
-											: 'bg-[#F5F6FD]'}"
-									>
-										<div class="absolute right-1 top-2">
-											<button
-												on:click={(e) => toggleOptions(task, e)}
-												class="h-5 w-5 text-gray-500 hover:text-gray-800"
-											>
-												<DotsVertical />
-											</button>
-										</div>
-										<div class="flex items-center gap-2 border-l-2 border-red-600 px-2">
-											<input
-												type="checkbox"
-												bind:checked={task.completed}
-												on:change={() => toggleTaskCompletion(task)}
-												class="h-4 w-4 appearance-none rounded-sm border-none bg-[#E2DCFD] outline-none checked:bg-[#5042A5] focus:ring-0"
-											/>
-											<div class="flex-grow">
-												<h3 class="text-lg font-semibold">{task.title || 'Untitled Task'}</h3>
-												<p class="text-sm text-gray-600">
-													{task.description || 'No description provided.'}
-												</p>
-												<p class="text-sm text-gray-500">
-													<span class="flex gap-1">
-														{@html getPriorityIndicator(task.priority)}
-													</span>
-												</p>
-											</div>
-										</div>
-										{#if task.taskStartTime}
-											<span
-												class="absolute bottom-2 right-2 flex items-center gap-1 text-xs text-gray-500"
-											>
-												<Clock class="h-3 w-3" />
-												{task.taskStartTime}
-												{formatDuration(task.taskDuration)}
-											</span>
-										{/if}
-									</div>
-								{:else}
-									<!-- Condensed Task View -->
-									<div class="relative mb-1 flex items-center bg-white">
-										<input
-											type="checkbox"
-											bind:checked={task.completed}
-											on:change={() => toggleTaskCompletion(task)}
-											class="h-4 w-4 appearance-none rounded-sm border-none bg-[#E2DCFD] outline-none checked:bg-[#5042A5] focus:ring-0"
-										/>
-										<div class="ml-2 flex-grow">
-											<h3 class="text-lg font-semibold">{task.title || 'Untitled Task'}</h3>
-										</div>
-										{#if task.taskStartTime}
-											<span class="ml-2 flex items-center gap-1 text-xs text-gray-500">
-												<Clock class="h-3 w-3" />
-												{task.taskStartTime}
-												{formatDuration(task.taskDuration)}
-											</span>
-										{/if}
-										<div class="ml-2">
-											<button
-												on:click={(e) => toggleOptions(task, e)}
-												class="h-5 w-5 text-gray-500 hover:text-gray-800"
-											>
-												<DotsVertical />
-											</button>
-										</div>
-									</div>
-								{/if}
-							{/each}
-						</div>
+				<div class="flex w-full flex-col gap-4 rounded-md bg-white p-3 shadow">
+					<h2 class="mb-2 text-sm font-bold text-black">Week {week}: {getWeekDateRange(week)}</h2>
+					<div class="flex flex-col gap-2">
+						{#each groupedTasksByWeek[week] as task (task.id)}
+							<TaskCard {task} viewStyle={$viewStyle} {toggleOptions} {activeDropdown} />
+						{/each}
 					</div>
-				{/if}
+				</div>
 			{/each}
 		</div>
 	{:else}
 		<p class="text-gray-500">No tasks available.</p>
 	{/if}
-</div>
+</SnapX>
 
-<!-- Global Dropdown rendered outside the scroll container.
-     It uses the computed fixed positioning (stored in activeDropdown.style) and the clickOutside action. -->
+<!-- Global Dropdown -->
 {#if activeDropdown}
 	<div
 		use:clickOutside={() => (activeDropdown = null)}
 		style={activeDropdown.style}
 		class="z-[100] rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5"
 	>
-		<ul class="py-1">
-			<li>
-				<EditTask newTask={activeDropdown.task} customDuration={activeDropdown.task.taskDuration} />
-			</li>
-			<li>
-				<button
-					class="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100"
-					on:click={() => {
-						taskHandlers.deleteTask(activeDropdown.task.id);
-						activeDropdown = null;
-					}}
-				>
-					Delete
-				</button>
-			</li>
-		</ul>
+		<TaskDropdown task={activeDropdown.task} style={activeDropdown.style} />
 	</div>
 {/if}

@@ -3,7 +3,7 @@ import { writable } from 'svelte/store';
 import { db } from '$lib/firebase/firebase.client';
 import { addDoc, deleteDoc, updateDoc, getDoc, getDocs, collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
+import { notificationHandlers } from '$lib/stores/notificationStore';
 // Task store state
 export const taskStore = writable({
 	isLoading: true,
@@ -91,15 +91,36 @@ export const taskHandlers = {
 			if (!userId) {
 				throw new Error('User ID is missing');
 			}
+
+			// Reference to the tasks collection in Firestore
 			const tasksRef = collection(db, `tasks`);
 			console.log(`Saving task for user: ${userId}`, taskData);
+
+			// Add the task to Firestore
 			const newTaskRef = await addDoc(tasksRef, {
 				...taskData,
 				imageUrls: [] // Initialize with an empty imageUrls array
 			});
-			await taskHandlers.updateTask(newTaskRef.id, { ...taskData, id: newTaskRef.id });
+
+			// Get today's date in YYYY-MM-DD format
+			const today = new Date().toISOString().split('T')[0];
+
+			// Get the task's start date in YYYY-MM-DD format
+			const taskDate = new Date(taskData.taskStartDate).toISOString().split('T')[0];
+
+			// Check if the task's start date is today
+			if (taskDate === today) {
+				// If the task is due today, create a notification
+				await notificationHandlers.createNotification(userId, {
+					message: `Task "${taskData.title}" is due today.`,
+					taskId: newTaskRef.id // Optional: Link the notification to the task
+				});
+			}
+
+			// Fetch the updated list of tasks for the user
 			await taskHandlers.getTasks(userId);
 
+			// Return the ID of the newly created task
 			return newTaskRef.id;
 		} catch (error) {
 			console.error('Error creating task:', error);

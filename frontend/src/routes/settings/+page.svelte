@@ -57,7 +57,8 @@
 			error = 'Failed to upload profile picture.';
 		}
 	}
-
+	const date = new Date();
+	const formattedDate = `${date.toLocaleString('en-US', { weekday: 'long' })}, ${date.getDate()} of ${date.toLocaleString('en-US', { month: 'long' })}, ${date.getFullYear()}`;
 	// Handle form submission
 	async function saveChanges() {
 		isLoading = true;
@@ -104,8 +105,11 @@
 
 <div class="p-6">
 	<!-- Page Header -->
-	<div class="flex w-full items-center justify-between">
-		<div class="text-xl font-bold text-black">Settings</div>
+	<div class="flex w-full min-w-[200px] flex-wrap items-center justify-between gap-2">
+		<div class="whitespace-nowrap text-lg font-bold text-black">Settings</div>
+		<div class="flex items-center gap-3 whitespace-nowrap">
+			<div class="text-sm font-bold text-gray-500">{formattedDate}</div>
+		</div>
 	</div>
 
 	<!-- Profile Picture -->

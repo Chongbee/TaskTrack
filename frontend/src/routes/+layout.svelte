@@ -56,7 +56,7 @@
 			</div>
 		{/if}
 
-		<main class="bg-[#F5F6FD]">
+		<main class="overflow-auto bg-[#F5F6FD]">
 			<slot></slot>
 		</main>
 	</div>
