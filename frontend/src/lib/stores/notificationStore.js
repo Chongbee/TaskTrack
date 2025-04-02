@@ -3,68 +3,88 @@ import { writable } from 'svelte/store';
 import { db } from '$lib/firebase/firebase.client';
 import { addDoc, updateDoc, getDocs, collection, doc, query, where } from 'firebase/firestore';
 
-// Notification store state
 export const notificationStore = writable({
 	isLoading: true,
-	notifications: []
+	notifications: [],
+	showArchived: false // New state to toggle archived view
 });
 
-// Handlers for notification-related operations
 export const notificationHandlers = {
-	// Create a new notification
-	createNotification: async (userId, notificationData) => {
+	// ... keep createNotification the same ...
+
+	// Modified to handle archived filtering
+	getNotifications: async (userId, showArchived = false) => {
 		try {
 			const notificationsRef = collection(db, 'notifications');
-			const newNotification = {
-				...notificationData,
-				userId,
-				viewed: false,
-				timestamp: new Date().toISOString()
-			};
-			const docRef = await addDoc(notificationsRef, newNotification);
+			let q = query(notificationsRef, where('userId', '==', userId));
 
-			// Fetch the updated list of notifications
-			await notificationHandlers.getNotifications(userId);
-		} catch (error) {
-			console.error('Error creating notification:', error);
-			throw error;
-		}
-	},
-
-	// Fetch notifications for a specific user
-	getNotifications: async (userId) => {
-		try {
-			const notificationsRef = collection(db, 'notifications');
-			const q = query(notificationsRef, where('userId', '==', userId));
 			const snapshot = await getDocs(q);
-			const notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+			let notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-			// Sort notifications by timestamp (newest first)
-			const sortedNotifications = notifications.sort((a, b) => {
-				return new Date(b.timestamp) - new Date(a.timestamp);
-			});
+			// Filter based on archived status unless showing all
+			if (!showArchived) {
+				notifications = notifications.filter((n) => !n.archived);
+			}
 
-			notificationStore.set({ isLoading: false, notifications: sortedNotifications });
+			// Sort by timestamp (newest first)
+			notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+			notificationStore.update((state) => ({
+				...state,
+				isLoading: false,
+				notifications,
+				showArchived
+			}));
 		} catch (error) {
 			console.error('Error fetching notifications:', error);
 		}
 	},
 
-	// Mark a notification as viewed
+	// Modified to archive when marking as viewed
 	markAsViewed: async (notificationId) => {
 		try {
 			const notificationRef = doc(db, 'notifications', notificationId);
-			await updateDoc(notificationRef, { viewed: true });
+			await updateDoc(notificationRef, {
+				viewed: true,
+				archived: true // Archive when viewed
+			});
 
-			// Update the store to reflect the change
 			notificationStore.update((state) => {
-				const updatedNotifications = state.notifications.map((notification) =>
-					notification.id === notificationId ? { ...notification, viewed: true } : notification
-				);
+				const updatedNotifications = state.notifications.filter((n) => n.id !== notificationId); // Remove from list since it's archived
 				return { ...state, notifications: updatedNotifications };
 			});
 		} catch (error) {
 			console.error('Error marking notification as viewed:', error);
+			throw error;
+		}
+	},
+
+	// New: Archive all notifications
+	// In your notificationHandlers.js
+	// In your notificationHandlers.js
+	archiveAllNotifications: async (userId) => {
+		try {
+			const notificationsRef = collection(db, 'notifications');
+			const q = query(
+				notificationsRef,
+				where('userId', '==', userId),
+				where('archived', '==', false)
+			);
+			const snapshot = await getDocs(q);
+
+			// Update each notification to be archived and viewed
+			const batchUpdates = snapshot.docs.map((doc) =>
+				updateDoc(doc.ref, {
+					archived: true,
+					viewed: true
+				})
+			);
+			await Promise.all(batchUpdates);
+
+			// Refresh the notifications list
+			await notificationHandlers.getNotifications(userId, false);
+		} catch (error) {
+			console.error('Error archiving notifications:', error);
 			throw error;
 		}
 	},
