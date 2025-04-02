@@ -47,7 +47,7 @@
 </script>
 
 <div class="app h-screen w-screen">
-	<div class="flex">
+	<div class="flex h-screen">
 		{#if isLoggedIn}
 			<Nav />
 		{:else}
@@ -56,7 +56,7 @@
 			</div>
 		{/if}
 
-		<main class="overflow-auto bg-[#F5F6FD]">
+		<main class="flex-1 overflow-auto bg-[#F5F6FD]">
 			<slot></slot>
 		</main>
 	</div>
@@ -64,18 +64,19 @@
 
 <style>
 	/* Reset margin and padding on the body */
-	body {
+	body,
+	html {
 		margin: 0;
 		padding: 0;
-		box-sizing: border-box;
+		height: 100%;
+		width: 100%;
 	}
 
 	.app {
+		height: 100vh;
+		width: 100vw;
 		display: flex;
 		flex-direction: column;
-		min-height: 100vh;
-		width: 100%;
-		background-color: #f5f6fd; /* Ensure background color matches your main content */
 	}
 
 	main {

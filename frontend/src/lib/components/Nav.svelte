@@ -69,9 +69,11 @@
 	}
 </script>
 
-<div class="flex h-screen w-[300px] flex-col justify-between bg-[#181625] p-5 text-gray-400">
+<div
+	class="flex h-screen min-h-screen w-[300px] flex-col justify-between overflow-x-visible bg-[#181625] p-5 text-gray-400"
+>
 	<!-- Top Section -->
-	<div class="space-y-8">
+	<div class="space-y-8 overflow-x-visible">
 		<!-- Logo, Search, and Icon -->
 		<div>
 			<!-- Logo and Icon -->
@@ -172,7 +174,7 @@
 	</div>
 
 	<!-- Bottom Section -->
-	<div>
+	<div class="sticky bottom-0 overflow-x-visible bg-[#181625] pt-4">
 		<!-- White Line Separator -->
 		<div class="my-4 border-t border-gray-600"></div>
 
@@ -183,7 +185,7 @@
 			<img src={profileImage} alt="Profile Picture" class="h-10 w-10 rounded-full object-cover" />
 
 			<!-- Display Name and Dropdown -->
-			<div class="relative flex-1">
+			<div class="relative flex-1 overflow-visible">
 				<button
 					on:click={toggleDropdown}
 					class="flex w-full items-center justify-between text-white hover:text-purple-500"
