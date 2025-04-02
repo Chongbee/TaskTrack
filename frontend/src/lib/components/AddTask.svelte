@@ -106,11 +106,20 @@
 		}
 
 		try {
+			isLoading = true; // Show loading state
+
+			// Create the task with all required fields including userId
 			const taskId = await taskHandlers.createTask(user.uid, {
 				...newTask,
-				taskStartDate: newTask.taskStartDate || new Date().toISOString() // Ensure date is included
+				userId: user.uid, // Add this line to associate task with user
+				taskStartDate: newTask.taskStartDate || new Date().toISOString(),
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+				completed: false // Ensure default value
 			});
-			userHandlers.addTaskToUser(user.uid, taskId);
+
+			// Add the task ID to the user's task list
+			await userHandlers.addTaskToUser(user.uid, taskId);
 
 			// Reset the task form
 			newTask = {
@@ -120,7 +129,7 @@
 				taskCategory: 'Home',
 				priority: 'Low',
 				taskStartTime: '',
-				taskStartDate: '', // Reset date field
+				taskStartDate: '',
 				taskDuration: '',
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
@@ -132,7 +141,9 @@
 			triggerPopup(taskId);
 		} catch (error) {
 			console.error('Error adding task:', error);
-			alert('Failed to add task.');
+			alert('Failed to add task. Please try again.');
+		} finally {
+			isLoading = false; // Hide loading state
 		}
 	};
 	// Function to handle hours input change
@@ -166,31 +177,34 @@
 
 <!-- Popup Notification -->
 {#if showPopup}
-	<div class="popup-container">
-		<span class="message">Task added successfully</span>
-		<div class="actions">
+	<div
+		class="fixed bottom-4 left-4 flex animate-[fadeIn_0.3s_ease-out] items-center gap-4 rounded-lg bg-white p-4 shadow-md"
+	>
+		<span class="text-gray-900">Task added successfully</span>
+		<div class="flex items-center gap-2">
 			<!-- Circular countdown container -->
-			<div class="countdown-circle-container relative flex items-center justify-center">
+			<div class="relative h-[50px] w-[50px]">
 				<!-- Static Circle Border -->
-				<div
-					class="countdown-circle absolute h-full w-full rounded-full border-4 border-gray-300"
-				></div>
+				<div class="absolute h-full w-full rounded-full border-4 border-gray-300"></div>
 
 				<!-- Animated Progress Circle -->
 				<div
-					class="countdown-progress absolute h-full w-full rounded-full border-4 border-[#7262D1]"
+					class="absolute h-full w-full rounded-full border-4 border-[#7262D1]"
 					style="background: conic-gradient(#7262D1 0% {remainingTime *
 						20}%, #e0e0e0 {remainingTime * 20}% 100%);"
 				></div>
 
 				<!-- Timer Text (no "s") -->
-				<span class="timer absolute text-lg font-bold">{remainingTime}</span>
+				<span
+					class="absolute inset-0 flex items-center justify-center text-lg font-bold text-gray-600"
+					>{remainingTime}</span
+				>
 			</div>
 			<button
-				class="w-auto rounded-full bg-[#7262D1] px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#5b4bcf]"
+				class="rounded-full bg-[#7262D1] px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#5b4bcf]"
 				on:click={undoTaskAddition}>Undo</button
 			>
-			<button class="close-btn" on:click={() => (showPopup = false)}>
+			<button class="text-gray-500 hover:text-gray-900" on:click={() => (showPopup = false)}>
 				<Close class="h-5 w-5" />
 			</button>
 		</div>
@@ -258,7 +272,7 @@
 							min="0"
 							max="12"
 							value={customDuration.split(':')[0]}
-							class="w-16 rounded-md border border-gray-300 p-2 text-center font-sans text-xl font-bold"
+							class="w-16 rounded-md border border-gray-300 p-2 text-center font-sans text-xl font-bold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 							on:input={handleCustomHoursChange}
 							id="hours"
 						/>
@@ -275,7 +289,7 @@
 							min="0"
 							max="59"
 							value={customDuration.split(':')[1]}
-							class="w-16 rounded-md border border-gray-300 p-2 text-center font-sans text-xl font-bold"
+							class="w-16 rounded-md border border-gray-300 p-2 text-center font-sans text-xl font-bold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 							on:input={handleCustomMinutesChange}
 							id="minutes"
 						/>
@@ -308,7 +322,9 @@
 
 	<!-- Task Modal -->
 	{#if showTaskModal}
-		<div class="w-96 flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+		<div
+			class="max-h-[80vh] w-96 flex-col overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-lg"
+		>
 			<!-- Close Button (X) -->
 			<div class="flex justify-end">
 				<button
@@ -490,104 +506,3 @@
 		</div>
 	{/if}
 </div>
-
-<style>
-	/* Remove arrows from input[type="number"] */
-	input[type='number']::-webkit-outer-spin-button,
-	input[type='number']::-webkit-inner-spin-button {
-		-webkit-appearance: none;
-		margin: 0;
-	}
-
-	input[type='number'] {
-		-moz-appearance: textfield;
-	}
-	.popup-container {
-		position: fixed;
-		bottom: 1rem;
-		left: 1rem;
-		background: white;
-		padding: 1rem;
-		border-radius: 8px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		animation: fadeIn 0.3s ease-out;
-	}
-
-	.countdown-circle-container {
-		position: relative;
-		width: 50px;
-		height: 50px;
-	}
-
-	.countdown-circle {
-		border-color: #dcdcdc;
-		border-radius: 50%;
-	}
-
-	.countdown-progress {
-		background: conic-gradient(#7262d1 0% 0%, #e0e0e0 0% 100%);
-		transition: background 1s linear; /* Smooth transition for the countdown animation */
-	}
-
-	.message {
-		font-size: 1rem;
-		color: black;
-	}
-
-	.actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.timer {
-		font-size: 1rem;
-		font-weight: bold;
-		color: gray;
-		position: absolute;
-	}
-
-	.undo-btn {
-		background: #7262d1;
-		color: white;
-		border: none;
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		font-weight: bold;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: background 0.2s ease-in-out;
-	}
-
-	.undo-btn:hover {
-		background: #5b4bcf;
-	}
-
-	.close-btn {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		color: gray;
-	}
-
-	.close-btn:hover {
-		color: black;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-</style>

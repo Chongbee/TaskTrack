@@ -18,28 +18,38 @@
 	import Help from '$lib/icons/Help.svelte';
 	import Notification from '$lib/icons/Notification.svelte';
 	import { clickOutside } from '$lib/utils/clickOutside';
+	import { userStore } from '$lib/stores/userStore';
 
 	let dropdownRef;
-	let displayName = ''; // Store the user's displayName
-	let profileImage = ''; // Store the user's profile picture
 	let isDropdownOpen = false; // Control dropdown visibility
 	let notificationCount = 0; // Store the number of notifications
 
 	// Fetch user data and notifications on mount
+	// Reactive declarations for immediate updates
+	$: displayName =
+		$userStore.currentUser?.displayName || $authStore.currentUser?.displayName || 'Username';
+	$: profileImage =
+		$userStore.currentUser?.profileImage ||
+		$authStore.currentUser?.photoURL ||
+		'https://i.imgur.com/ucsOFUO.jpeg';
 	onMount(() => {
-		authStore.subscribe((auth) => {
+		// Single auth store subscription
+		const authUnsubscribe = authStore.subscribe((auth) => {
 			if (auth.currentUser) {
-				displayName = auth.currentUser.displayName || 'Username'; // Default to "Username" if displayName is not set
-				profileImage = auth.currentUser.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg'; // Default profile picture
-
-				// Fetch notifications for the current user
-				notificationHandlers.getNotifications(auth.currentUser.uid).then(() => {
-					notificationStore.subscribe((state) => {
-						notificationCount = state.notifications.filter((n) => !n.viewed).length; // Update the notification count
-					});
-				});
+				notificationHandlers.getNotifications(auth.currentUser.uid);
 			}
 		});
+
+		// Notification store subscription
+		const notificationUnsubscribe = notificationStore.subscribe((state) => {
+			notificationCount = state.notifications.filter((n) => !n.viewed).length;
+		});
+
+		// Cleanup both subscriptions on unmount
+		return () => {
+			authUnsubscribe();
+			notificationUnsubscribe();
+		};
 	});
 
 	// Logout function
@@ -187,7 +197,7 @@
 					<div
 						bind:this={dropdownRef}
 						use:clickOutside={() => (isDropdownOpen = null)}
-						class="absolute bottom-0 left-full ml-2 w-40 rounded-md bg-[#2A2836] shadow-lg"
+						class="absolute bottom-0 left-full z-50 ml-2 w-40 rounded-md bg-[#2A2836] shadow-lg"
 					>
 						<!-- Profile Option -->
 						<a

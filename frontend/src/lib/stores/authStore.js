@@ -62,45 +62,47 @@ export const authHandlers = {
 		if (!user) throw new Error('User is not authenticated');
 		const userRef = doc(db, 'users', user.uid);
 		try {
-			if (user) {
-				console.log('LOOK HERE', user);
+			const userDoc = await getDoc(userRef);
+			let userData;
 
-				const userDoc = await getDoc(userRef);
-				let userData;
-				if (userDoc.exists()) {
-					// console.log("Fetching user from Firestore");
-					userData = userDoc.data();
-					authStore.update((curr) => {
-						return { ...curr, currentUser: user, data: userData, isLoading: false };
-					});
-				} else {
-					console.log('Creating a new user in Firestore');
-					const profileImage = user.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg';
-					userData = {
-						email: user.email,
-						profileImage,
-						displayName: user.displayName,
-						uid: user.uid,
-						phoneNumber: user.phoneNumber,
-						role: 'user',
-						admin: false,
-						tasks: [],
-						description: '',
-						createdAt: new Date().toISOString()
-					};
-
-					await setDoc(userRef, userData, { merge: true });
-					console.log('New user document created');
-				}
-				userStore.update((storeData) => ({
-					...storeData,
-					currentUser: { ...userData },
-					isLoading: false
-				}));
+			if (userDoc.exists()) {
+				userData = userDoc.data();
+			} else {
+				const profileImage = user.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg';
+				userData = {
+					email: user.email,
+					profileImage,
+					displayName: user.displayName,
+					uid: user.uid,
+					phoneNumber: user.phoneNumber,
+					role: 'user',
+					admin: false,
+					tasks: [],
+					description: '',
+					createdAt: new Date().toISOString()
+				};
+				await setDoc(userRef, userData, { merge: true });
 			}
+
+			// Merge auth user data with Firestore data
+			const mergedUser = {
+				...user, // Auth data
+				...userData // Firestore data
+			};
+
+			// Update both stores
+			authStore.set({
+				currentUser: mergedUser,
+				isLoading: false
+			});
+			userStore.set({
+				currentUser: mergedUser,
+				isLoading: false
+			});
 		} catch (error) {
 			console.error('Error initializing user:', error);
-			userStore.update((storeData) => ({ ...storeData, currentUser: null, isLoading: false }));
+			authStore.set({ currentUser: null, isLoading: false });
+			userStore.set({ currentUser: null, isLoading: false });
 		}
 	}
 };

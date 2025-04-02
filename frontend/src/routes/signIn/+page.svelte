@@ -5,29 +5,57 @@
 	let email = '';
 	let password = '';
 	let confirmPassword = '';
+	let error = '';
 
 	async function handleSubmit() {
+		error = '';
 		if (!email || !password || (register && !confirmPassword)) {
+			error = 'Please fill in all fields';
 			return;
 		}
-		if (register && password === confirmPassword) {
-			try {
-				await authHandlers.signup(email, password);
-			} catch (err) {
-				console.log(err);
-			}
-		} else {
-			try {
-				await authHandlers.login(email, password);
-			} catch (err) {
-				console.log(err);
-			}
+		if (register && password !== confirmPassword) {
+			error = 'Passwords do not match';
+			return;
 		}
-		if ($authStore.currentUser) {
-			goto('/');
+
+		try {
+			if (register) {
+				await authHandlers.signup(email, password);
+			} else {
+				// First check if email exists
+				try {
+					await authHandlers.login(email, password);
+				} catch (err) {
+					if (err.code === 'auth/wrong-password') {
+						error = 'Incorrect password';
+						return;
+					} else if (err.code === 'auth/user-not-found') {
+						error = 'No account found with this email';
+						return;
+					}
+					throw err; // Re-throw other errors
+				}
+			}
+
+			if ($authStore.currentUser) {
+				goto('/');
+			}
+		} catch (err) {
+			console.error('Auth error:', err);
+
+			if (err.code === 'auth/email-already-in-use') {
+				error = 'Email already in use';
+			} else if (!register) {
+				// This handles other login errors not caught above
+				error = 'Login failed. Please try again.';
+			} else {
+				error = 'Registration failed. Please try again.';
+			}
 		}
 	}
 </script>
+
+<!-- The rest of your template remains the same -->
 
 <div class="flex h-screen flex-col md:flex-row">
 	<!-- Left Column: Authentication Form -->
@@ -46,6 +74,14 @@
 			<h2 class="text-xl font-semibold text-gray-300 md:text-2xl">
 				{register ? 'Register' : 'Log in'}
 			</h2>
+
+			<!-- Error Message -->
+			{#if error}
+				<div class="mb-4 rounded-md bg-red-500/20 p-3 text-center text-red-400">
+					{error}
+				</div>
+			{/if}
+
 			<form class="mt-4 space-y-3">
 				<input
 					bind:value={email}
@@ -77,11 +113,12 @@
 			</form>
 
 			<!-- Toggle Login/Register -->
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="mt-4 cursor-pointer text-center text-gray-400"
-				on:click={() => (register = !register)}
+				on:click={() => {
+					register = !register;
+					error = ''; // Clear error when toggling
+				}}
 			>
 				{#if register}
 					Already have an account?

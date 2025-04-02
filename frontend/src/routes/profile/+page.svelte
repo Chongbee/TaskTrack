@@ -17,6 +17,7 @@
 	let tasksCompleted = 0;
 	let totalTasks = 0;
 	let recentActivity = [];
+	let userId = ''; // Add this line to store user ID
 
 	// Calendar data
 	let currentDate = new Date();
@@ -34,13 +35,19 @@
 				name = state.currentUser.displayName || '';
 				email = state.currentUser.email || '';
 				profileImage = state.currentUser.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg';
+				userId = state.currentUser.uid; // Store the user ID
 			}
 		});
 
-		userStore.subscribe((state) => {
+		userStore.subscribe(async (state) => {
 			if (state.currentUser) {
 				bio = state.currentUser.description || '';
 				phoneNumber = state.currentUser.phoneNumber || '';
+
+				// Fetch only the current user's tasks
+				if (state.currentUser.tasks) {
+					await taskHandlers.getMyTasks(state.currentUser.tasks);
+				}
 			}
 		});
 
@@ -69,8 +76,6 @@
 				updateCalendar();
 			}
 		});
-
-		await taskHandlers.getTasks();
 	});
 
 	// Redirect to settings page
