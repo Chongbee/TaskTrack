@@ -1,58 +1,78 @@
 // @ts-nocheck
 import { writable } from 'svelte/store';
 import { db } from '$lib/firebase/firebase.client';
-import { addDoc, updateDoc, getDocs, collection, doc, query, where } from 'firebase/firestore';
+import {
+	addDoc,
+	updateDoc,
+	deleteDoc,
+	getDocs,
+	collection,
+	doc,
+	query,
+	where,
+	writeBatch
+} from 'firebase/firestore';
 
 export const notificationStore = writable({
 	isLoading: true,
-	notifications: [],
+	activeNotifications: [],
+	archivedNotifications: [],
 	showArchived: false // New state to toggle archived view
 });
 
 export const notificationHandlers = {
-	// ... keep createNotification the same ...
-
-	// Modified to handle archived filtering
-	getNotifications: async (userId, showArchived = false) => {
+	getNotifications: async (userId) => {
 		try {
 			const notificationsRef = collection(db, 'notifications');
-			let q = query(notificationsRef, where('userId', '==', userId));
-
+			const q = query(notificationsRef, where('userId', '==', userId));
 			const snapshot = await getDocs(q);
-			let notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-			// Filter based on archived status unless showing all
-			if (!showArchived) {
-				notifications = notifications.filter((n) => !n.archived);
-			}
+			const allNotifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-			// Sort by timestamp (newest first)
-			notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+			// Split into active and archived
+			const active = allNotifications.filter((n) => !n.archived);
+			const archived = allNotifications.filter((n) => n.archived);
 
 			notificationStore.update((state) => ({
 				...state,
 				isLoading: false,
-				notifications,
-				showArchived
+				activeNotifications: active,
+				archivedNotifications: archived
 			}));
 		} catch (error) {
 			console.error('Error fetching notifications:', error);
 		}
 	},
 
+	createNotification: async (userId, notificationData) => {
+		try {
+			const notificationsRef = collection(db, 'notifications');
+			const docRef = await addDoc(notificationsRef, {
+				...notificationData,
+				userId,
+				viewed: false,
+				archived: false, // New notifications are never archived by default
+				timestamp: new Date().toISOString()
+			});
+			return docRef.id;
+		} catch (error) {
+			console.error('Error creating notification:', error);
+			throw error;
+		}
+	},
+
 	// Modified to archive when marking as viewed
-	markAsViewed: async (notificationId) => {
+	markAsViewed: async (notificationId, userId) => {
+		// Add userId parameter
 		try {
 			const notificationRef = doc(db, 'notifications', notificationId);
 			await updateDoc(notificationRef, {
 				viewed: true,
-				archived: true // Archive when viewed
+				archived: true
 			});
 
-			notificationStore.update((state) => {
-				const updatedNotifications = state.notifications.filter((n) => n.id !== notificationId); // Remove from list since it's archived
-				return { ...state, notifications: updatedNotifications };
-			});
+			// Force a refresh of all notifications
+			await notificationHandlers.getNotifications(userId);
 		} catch (error) {
 			console.error('Error marking notification as viewed:', error);
 			throw error;
@@ -72,19 +92,35 @@ export const notificationHandlers = {
 			);
 			const snapshot = await getDocs(q);
 
-			// Update each notification to be archived and viewed
-			const batchUpdates = snapshot.docs.map((doc) =>
-				updateDoc(doc.ref, {
+			const batch = writeBatch(db);
+			snapshot.docs.forEach((doc) => {
+				batch.update(doc.ref, {
 					archived: true,
 					viewed: true
-				})
-			);
-			await Promise.all(batchUpdates);
+				});
+			});
+			await batch.commit();
 
-			// Refresh the notifications list
-			await notificationHandlers.getNotifications(userId, false);
+			// Immediately update store state
+			notificationStore.update((state) => {
+				const notification = state.activeNotifications.find((n) => n.id === notificationId);
+				if (!notification) return state;
+
+				return {
+					...state,
+					activeNotifications: state.activeNotifications.filter((n) => n.id !== notificationId),
+					archivedNotifications: [
+						...state.archivedNotifications,
+						{
+							...notification,
+							viewed: true,
+							archived: true
+						}
+					]
+				};
+			});
 		} catch (error) {
-			console.error('Error archiving notifications:', error);
+			console.error('Error marking notification as viewed:', error);
 			throw error;
 		}
 	},
@@ -93,16 +129,24 @@ export const notificationHandlers = {
 	clearAllNotifications: async (userId) => {
 		try {
 			const notificationsRef = collection(db, 'notifications');
-			const q = query(notificationsRef, where('userId', '==', userId));
+			const q = query(
+				notificationsRef,
+				where('userId', '==', userId),
+				where('archived', '==', true)
+			);
 			const snapshot = await getDocs(q);
 
-			// Delete each notification
-			snapshot.docs.forEach(async (doc) => {
-				await deleteDoc(doc.ref);
+			const batch = writeBatch(db);
+			snapshot.docs.forEach((doc) => {
+				batch.delete(doc.ref);
 			});
+			await batch.commit();
 
-			// Update the store to reflect the change
-			notificationStore.set({ isLoading: false, notifications: [] });
+			// Immediately update store state
+			notificationStore.update((state) => ({
+				...state,
+				archivedNotifications: []
+			}));
 		} catch (error) {
 			console.error('Error clearing notifications:', error);
 			throw error;

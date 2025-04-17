@@ -9,6 +9,10 @@
 	let isLoading = true;
 	let currentUserId = null;
 	let showArchived = false;
+	$: currentNotifications = showArchived
+		? $notificationStore.archivedNotifications
+		: $notificationStore.activeNotifications;
+	$: unreadCount = $notificationStore.activeNotifications.length;
 
 	// Fetch notifications when the page loads
 	onMount(() => {
@@ -21,13 +25,10 @@
 	});
 
 	async function loadNotifications() {
-		await notificationHandlers.getNotifications(currentUserId, showArchived);
-		notificationStore.subscribe((state) => {
-			notifications = state.notifications;
-			isLoading = state.isLoading;
-		});
+		isLoading = true;
+		await notificationHandlers.getNotifications(currentUserId);
+		isLoading = false;
 	}
-
 	async function markAllAsRead() {
 		if (currentUserId) {
 			await notificationHandlers.archiveAllNotifications(currentUserId);
@@ -37,12 +38,16 @@
 
 	async function toggleArchivedView() {
 		showArchived = !showArchived;
-		await loadNotifications();
 	}
 
 	async function markAsViewed(notificationId) {
-		await notificationHandlers.markAsViewed(notificationId);
-		await loadNotifications();
+		const confirmed = confirm('Mark this notification as read?');
+		if (confirmed && currentUserId) {
+			// Make sure currentUserId exists
+			isLoading = true;
+			await notificationHandlers.markAsViewed(notificationId, currentUserId); // Pass userId
+			isLoading = false;
+		}
 	}
 
 	async function clearAllNotifications() {
@@ -88,21 +93,22 @@
 		<button
 			on:click={clearAllNotifications}
 			class="rounded-md bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
+			title="Clear all read notifications"
 		>
-			Clear All
+			Clear Read Notifications
 		</button>
 	{/if}
 </div>
 
 {#if isLoading}
 	<p class="text-gray-500">Loading notifications...</p>
-{:else if notifications.length === 0}
+{:else if currentNotifications.length === 0}
 	<p class="text-gray-500">
 		{showArchived ? 'No archived notifications' : 'No unread notifications'}
 	</p>
 {:else}
 	<div class="space-y-3">
-		{#each notifications as notification (notification.id)}
+		{#each currentNotifications as notification (notification.id)}
 			<div
 				on:click={() => markAsViewed(notification.id)}
 				class="cursor-pointer rounded-md p-3 shadow-sm {notification.viewed
@@ -113,10 +119,10 @@
 					<div>
 						<h3 class="text-sm font-semibold text-gray-800">{notification.message}</h3>
 						<p class="text-xs text-gray-600">
-							Time: {new Date(notification.timestamp).toLocaleString()}
+							{new Date(notification.timestamp).toLocaleString()}
 						</p>
 					</div>
-					{#if !notification.viewed && !showArchived}
+					{#if !notification.viewed}
 						<span class="h-3 w-3 rounded-full bg-[#5042A5]"></span>
 					{/if}
 				</div>

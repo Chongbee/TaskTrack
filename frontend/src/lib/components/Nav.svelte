@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { authStore, authHandlers } from '$lib/stores/authStore';
 	import { notificationStore, notificationHandlers } from '$lib/stores/notificationStore';
+	import { taskStore } from '$lib/stores/taskStore';
 	import Arrow from '$lib/icons/Arrow.svelte';
 	import Barchart from '$lib/icons/Barchart.svelte';
 	import Dashboard from '$lib/icons/Dashboard.svelte';
@@ -19,51 +20,126 @@
 	import Notification from '$lib/icons/Notification.svelte';
 	import { clickOutside } from '$lib/utils/clickOutside';
 	import { userStore } from '$lib/stores/userStore';
+	import { db } from '$lib/firebase/firebase.client';
+	import { collection, query, where, onSnapshot } from 'firebase/firestore';
+	import { debounce } from '$lib/utils/debounce';
+	import EditTask from '$lib/components/EditTask.svelte';
+	import SearchTask from './SearchTask.svelte';
+	import Close from '$lib/icons/Close.svelte';
+	import { fly } from 'svelte/transition';
+	export let task;
 
 	let dropdownRef;
-	let isDropdownOpen = false; // Control dropdown visibility
-	let notificationCount = 0; // Store the number of notifications
+	let isDropdownOpen = false;
+	let notificationCount = 0;
+	let unsubscribeNotifications;
+	let searchQuery = '';
+	let searchResults = [];
+	let showSearchResults = false;
+	let selectedTask = null;
+	let showSearchModal = false;
 
-	// Fetch user data and notifications on mount
-	// Reactive declarations for immediate updates
+	// Reactive declarations
 	$: displayName =
 		$userStore.currentUser?.displayName || $authStore.currentUser?.displayName || 'Username';
 	$: profileImage =
 		$userStore.currentUser?.profileImage ||
 		$authStore.currentUser?.photoURL ||
 		'https://i.imgur.com/ucsOFUO.jpeg';
+	$: notificationCount = $notificationStore.activeNotifications.length;
+
+	// Fixed search function
+	const performSearch = debounce(() => {
+		if (searchQuery.trim() === '') {
+			searchResults = [];
+			showSearchResults = false;
+			return;
+		}
+
+		const queryLower = searchQuery.toLowerCase();
+		searchResults = ($taskStore.tasks || []).filter(
+			(task) =>
+				task.userId === $authStore.currentUser?.uid &&
+				(task.title?.toLowerCase().includes(queryLower) ||
+					task.description?.toLowerCase().includes(queryLower))
+		);
+		showSearchResults = true;
+	}, 300);
+	function handleSearchInput(e) {
+		searchQuery = e.target.value;
+		if (searchQuery.trim() === '') {
+			searchResults = [];
+			showSearchResults = false;
+		} else {
+			performSearch();
+		}
+	}
+
+	function clearSearch() {
+		searchQuery = '';
+		searchResults = [];
+		showSearchResults = false;
+	}
+
 	onMount(() => {
-		// Single auth store subscription
 		const authUnsubscribe = authStore.subscribe((auth) => {
 			if (auth.currentUser) {
-				notificationHandlers.getNotifications(auth.currentUser.uid);
+				const notificationsRef = collection(db, 'notifications');
+				const q = query(notificationsRef, where('userId', '==', auth.currentUser.uid));
+
+				unsubscribeNotifications = onSnapshot(q, (snapshot) => {
+					let notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+					notificationStore.update((state) => ({
+						...state,
+						isLoading: false,
+						activeNotifications: notifications.filter((n) => !n.archived),
+						archivedNotifications: notifications.filter((n) => n.archived)
+					}));
+				});
 			}
 		});
 
-		// Notification store subscription
-		const notificationUnsubscribe = notificationStore.subscribe((state) => {
-			notificationCount = state.notifications.filter((n) => !n.viewed).length;
-		});
-
-		// Cleanup both subscriptions on unmount
 		return () => {
 			authUnsubscribe();
-			notificationUnsubscribe();
+			if (unsubscribeNotifications) unsubscribeNotifications();
 		};
 	});
+	function openTaskViewModal(task) {
+		showSearchModal = false;
 
-	// Logout function
+		selectedTask = { ...task }; // Create a new object reference
+		showSearchModal = true;
+		showSearchResults = false;
+
+		// Reset focus
+		setTimeout(() => {
+			if (typeof window !== 'undefined') {
+				document.activeElement?.blur();
+			}
+		}, 0);
+	}
 	const logout = () => {
 		authHandlers.logout().then(() => {
 			if (typeof window !== 'undefined') {
 				localStorage.removeItem('searchStore');
 				localStorage.removeItem('selectedServices');
 			}
-			goto('/signIn'); // Redirect after cleanup
+			goto('/signIn');
 		});
 	};
+	function closeSearchModal() {
+		showSearchModal = false;
+		selectedTask = null;
+		// Don't clear searchQuery here to allow multiple searches
+		showSearchResults = false;
 
-	// Toggle dropdown visibility
+		// Return focus to search input
+		setTimeout(() => {
+			const searchInput = document.querySelector('input[type="text"]');
+			searchInput?.focus();
+		}, 50);
+	}
 	function toggleDropdown() {
 		isDropdownOpen = !isDropdownOpen;
 	}
@@ -74,15 +150,15 @@
 >
 	<!-- Top Section -->
 	<div class="space-y-8 overflow-x-visible">
-		<!-- Logo, Search, and Icon -->
+		<!-- Logo and Search -->
 		<div>
-			<!-- Logo and Icon -->
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-1">
-					<img src="tttlogo.png" alt="TaskTrack Logo" class="h-8 w-8" />
-					<span class="text-lg font-semibold text-white">TaskTrack</span>
+					<a href="/dashboard" class="flex items-center gap-1 no-underline hover:no-underline">
+						<img src="tttlogo.png" alt="TaskTrack Logo" class="h-8 w-8" />
+						<span class="text-lg font-semibold text-white">TaskTrack</span>
+					</a>
 				</div>
-				<!-- Icon Button -->
 				<a href="/inbox" class="relative flex items-center justify-center text-white">
 					<Notification class="h-6 w-6 hover:opacity-80" />
 					{#if notificationCount > 0}
@@ -90,17 +166,55 @@
 					{/if}
 				</a>
 			</div>
+
 			<!-- Search Bar -->
-			<div class="mt-5">
+			<div class="relative mt-5">
 				<input
 					type="text"
-					placeholder="Search"
+					placeholder="Search tasks..."
 					class="w-full rounded-md bg-[#2A2836] px-4 py-2 text-sm text-gray-400 focus:outline-none focus:ring focus:ring-purple-500"
+					bind:value={searchQuery}
+					on:input={handleSearchInput}
+					on:keydown={(e) => {
+						if (e.key === 'Escape' && showSearchResults) {
+							showSearchResults = false;
+						}
+					}}
+					on:focus={() => (showSearchResults = true)}
 				/>
+				{#if searchQuery}
+					<button
+						on:click={clearSearch}
+						class="absolute right-3 top-2.5 text-gray-500 hover:text-white"
+					>
+						×
+					</button>
+				{/if}
+
+				<!-- Search Results -->
+				{#if showSearchResults && searchResults.length > 0}
+					<div
+						class="absolute left-0 right-0 z-50 mt-1 max-h-96 overflow-y-auto rounded-md bg-[#2A2836] shadow-lg transition-all duration-200"
+						in:fly={{ y: -10, duration: 150 }}
+						out:fly={{ y: -10, duration: 150 }}
+					>
+						{#each searchResults as task}
+							<button
+								on:click|preventDefault={() => openTaskViewModal(task)}
+								class="block w-full border-b border-gray-700 px-4 py-3 text-left text-sm text-white hover:bg-[#5042A5] focus:bg-[#5042A5] focus:outline-none"
+							>
+								<div class="font-medium">{task.title}</div>
+								{#if task.description}
+									<div class="truncate text-gray-400">{task.description}</div>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		</div>
 
-		<!-- Useful Section -->
+		<!-- Navigation Sections -->
 		<div>
 			<p class="text-xs uppercase text-gray-500">Useful</p>
 			<nav class="mt-4 space-y-3">
@@ -129,8 +243,6 @@
 				</a>
 			</nav>
 		</div>
-
-		<!-- Activities Section -->
 		<div>
 			<p class="text-xs uppercase text-gray-500">Activities</p>
 			<nav class="mt-4 space-y-3">
@@ -171,20 +283,32 @@
 				</a>
 			</nav>
 		</div>
+
+		<!-- More navigation sections... -->
 	</div>
 
-	<!-- Bottom Section -->
+	<!-- Edit Task Modal -->
+	{#if showSearchModal && selectedTask}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+			on:click|self={closeSearchModal}
+		>
+			<div class="w-full max-w-md rounded-lg p-6" on:click|stopPropagation>
+				<button
+					on:click={closeSearchModal}
+					class="absolute right-4 top-4 text-gray-400 hover:text-white"
+				>
+					<Close class="h-6 w-6" />
+				</button>
+				<SearchTask task={selectedTask} onClose={closeSearchModal} />
+			</div>
+		</div>
+	{/if}
+	<!-- Bottom Profile Section -->
 	<div class="sticky bottom-0 overflow-x-visible bg-[#181625] pt-4">
-		<!-- White Line Separator -->
 		<div class="my-4 border-t border-gray-600"></div>
-
-		<!-- Profile Section -->
 		<div class="flex items-center gap-3">
-			<!-- Profile Picture -->
-			<!-- svelte-ignore a11y_img_redundant_alt -->
 			<img src={profileImage} alt="Profile Picture" class="h-10 w-10 rounded-full object-cover" />
-
-			<!-- Display Name and Dropdown -->
 			<div class="relative flex-1 overflow-visible">
 				<button
 					on:click={toggleDropdown}
@@ -193,23 +317,18 @@
 					<span class="whitespace-nowrap font-medium">{displayName}</span>
 					<span class="material-icons"><Arrow /></span>
 				</button>
-
-				<!-- Dropdown Menu (Right-Side) -->
 				{#if isDropdownOpen}
 					<div
 						bind:this={dropdownRef}
 						use:clickOutside={() => (isDropdownOpen = null)}
 						class="absolute bottom-0 left-full z-50 ml-2 w-40 rounded-md bg-[#2A2836] shadow-lg"
 					>
-						<!-- Profile Option -->
 						<a
 							href="/profile"
 							class="block w-full px-4 py-2 text-left text-sm text-white hover:bg-[#5042A5]"
 						>
 							Profile
 						</a>
-
-						<!-- Logout Option -->
 						<button
 							on:click={logout}
 							class="block w-full px-4 py-2 text-left text-sm text-white hover:bg-[#5042A5]"

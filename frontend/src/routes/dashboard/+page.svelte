@@ -34,11 +34,42 @@
 	let recentActivity = [];
 	let tasksLoading = true;
 
+	// Function to get priority classes
+	function getPriorityClasses(priority) {
+		const p = priority?.toLowerCase();
+		if (p === 'high') return 'bg-red-100 text-red-800';
+		if (p === 'medium') return 'bg-yellow-100 text-yellow-800';
+		return 'bg-gray-100 text-gray-800';
+	}
+
+	// Update metrics whenever tasks change
 	$: {
 		if ($authStore.currentUser && $taskStore.tasks) {
 			userTasks = $taskStore.tasks.filter((task) => task.userId === $authStore.currentUser.uid);
 			updateMetrics();
 		}
+	}
+
+	// Get top 3 high priority tasks due soonest
+	function getPriorityTasks() {
+		if (!userTasks.length) return [];
+
+		const priorityOrder = { high: 1, medium: 2, low: 3 };
+
+		return userTasks
+			.filter((task) => !task.completed)
+			.sort((a, b) => {
+				// Sort by priority first
+				const priorityDiff =
+					priorityOrder[a.priority?.toLowerCase()] - priorityOrder[b.priority?.toLowerCase()];
+				if (priorityDiff !== 0) return priorityDiff;
+
+				// Then by due date (soonest first)
+				const aDate = a.dueDate ? new Date(a.dueDate) : new Date(8640000000000000);
+				const bDate = b.dueDate ? new Date(b.dueDate) : new Date(8640000000000000);
+				return aDate - bDate;
+			})
+			.slice(0, 3);
 	}
 
 	// Format time ago
@@ -193,13 +224,6 @@
 			}
 		};
 	});
-
-	// Watch for task store changes
-	$: {
-		if (!userTasks.isLoading) {
-			updateMetrics();
-		}
-	}
 </script>
 
 <!-- Main Content -->
@@ -229,14 +253,14 @@
 
 	<!-- Task Summary -->
 	<div class="mt-6 rounded-md bg-white p-4 shadow">
-		<div class="text-lg font-bold text-black">Task Summary</div>
+		<div class="text-lg font-bold text-black">Priority Tasks (Due Soonest)</div>
 		{#if tasksLoading}
 			<div class="p-4 text-center text-gray-500">Loading tasks...</div>
 		{:else if userTasks.length === 0}
 			<div class="p-4 text-center text-gray-500">No tasks found. Create one to get started!</div>
 		{:else}
 			<div class="mt-4 space-y-2">
-				{#each userTasks.slice(0, 3) as task (task.id)}
+				{#each getPriorityTasks() as task (task.id)}
 					<div class="flex items-center justify-between rounded-md bg-[#F5F6FD] p-3">
 						<div class="flex items-center gap-2">
 							<input
@@ -245,23 +269,33 @@
 								on:change={async () => {
 									const newCompletedState = !task.completed;
 									try {
-										// Optimistically update the local state
-										task.completed = newCompletedState;
-										// Update in Firestore and store
 										await taskHandlers.updateTask(task.id, {
 											completed: newCompletedState,
 											completedAt: newCompletedState ? new Date().toISOString() : null
 										});
 									} catch (error) {
-										// Revert if update fails
-										task.completed = !newCompletedState;
 										console.error('Failed to update task:', error);
 									}
 								}}
 								class="h-4 w-4 appearance-none rounded-sm border-none bg-[#E2DCFD] outline-none checked:bg-[#5042A5] focus:ring-0"
 							/>
-							<div class="text-lg font-semibold text-black">{task.title}</div>
-							<div class="text-sm text-gray-500">{task.priority}</div>
+							<div class="flex flex-col">
+								<div class="text-lg font-semibold text-black">{task.title}</div>
+								<div class="flex gap-2">
+									<span
+										class="rounded px-2 py-0.5 text-sm font-medium {getPriorityClasses(
+											task.priority
+										)}"
+									>
+										{task.priority}
+									</span>
+									{#if task.dueDate}
+										<span class="text-sm text-gray-500">
+											Due: {new Date(task.dueDate).toLocaleDateString()}
+										</span>
+									{/if}
+								</div>
+							</div>
 						</div>
 						{#if task.timeEstimate}
 							<div class="flex items-center gap-2 text-sm text-gray-500">
