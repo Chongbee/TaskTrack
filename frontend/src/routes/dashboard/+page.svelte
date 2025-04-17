@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import Clock from '$lib/icons/Clock.svelte';
 	import { authStore } from '$lib/stores/authStore';
+	import AddTaskD from '$lib/components/AddTaskD.svelte';
 
 	// Chart.js will be loaded dynamically
 	let Chart;
@@ -18,7 +19,11 @@
 
 	// Quick actions
 	const quickActions = [
-		{ icon: '📝', title: 'Add Task', action: () => (showAddTaskModal = true) },
+		{
+			icon: '📝',
+			title: 'Add Task',
+			action: () => (showAddTaskModal = true) // This will directly open the modal
+		},
 		{ icon: '📅', title: 'Schedule', action: () => goto('/calendar') },
 		{ icon: '📊', title: 'Analytics', action: () => showAnalytics() }
 	];
@@ -366,11 +371,6 @@
 	</div>
 </div>
 
-<!-- Add Task Modal -->
-{#if showAddTaskModal}
-	<AddTask on:close={() => (showAddTaskModal = false)} />
-{/if}
-
 <!-- Analytics Modal -->
 {#if showAnalyticsModal}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -426,6 +426,7 @@
 		</div>
 	</div>
 {/if}
+<AddTaskD bind:show={showAddTaskModal} />
 
 <style>
 	.grid {

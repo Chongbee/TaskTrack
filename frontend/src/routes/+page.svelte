@@ -19,6 +19,7 @@
 	import TaskDropdown from '$lib/components/TaskDropdown.svelte';
 	import SnapX from '$lib/components/SnapX.svelte';
 	import Header from '$lib/components/Header.svelte';
+	import AddTaskD from '$lib/components/AddTaskD.svelte';
 
 	let userId = null;
 	let userData = null;
@@ -171,7 +172,7 @@
 		<ViewModeToggle {viewMode} {viewStyle} />
 
 		<div>
-			<AddTask />
+			<AddTaskD />
 		</div>
 	</div>
 </div>
