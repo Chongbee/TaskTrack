@@ -3,8 +3,6 @@
 	export let viewStyle = 'default'; // 'default' or 'condensed'
 	export let toggleOptions; // Function to toggle dropdown
 	export let activeDropdown; // Active dropdown state
-	console.log('TaskCard props:', { task, viewStyle, toggleOptions, activeDropdown });
-	// Import necessary functions and icons
 	import { taskHandlers } from '$lib/stores/taskStore';
 	import DotsVertical from '$lib/icons/DotsVertical.svelte';
 	import Clock from '$lib/icons/Clock.svelte';

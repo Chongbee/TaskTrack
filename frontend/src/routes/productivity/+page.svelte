@@ -214,7 +214,10 @@
 	onMount(async () => {
 		try {
 			loading = true;
-			await taskHandlers.getTasks();
+			// Replace getTasks() with getMyTasks()
+			if ($authStore.currentUser?.uid && $authStore.currentUser?.tasks) {
+				await taskHandlers.getMyTasks($authStore.currentUser.tasks);
+			}
 			loading = false;
 			await initRadialChart();
 			await initLineChart();

@@ -57,8 +57,20 @@ export const taskHandlers = {
 
 	getMyTasks: async (taskIds) => {
 		try {
+			// Clear existing tasks immediately
+			taskStore.update((state) => ({
+				...state,
+				isLoading: true,
+				tasks: []
+			}));
+
 			if (!Array.isArray(taskIds) || taskIds.length === 0) {
-				console.warn('Invalid user ID or task IDs.');
+				console.warn('No task IDs provided or invalid format');
+				taskStore.update((state) => ({
+					...state,
+					isLoading: false,
+					tasks: []
+				}));
 				return;
 			}
 
@@ -82,6 +94,11 @@ export const taskHandlers = {
 			}));
 		} catch (error) {
 			console.error('Error fetching tasks:', error);
+			taskStore.update((state) => ({
+				...state,
+				isLoading: false,
+				tasks: []
+			}));
 		}
 	},
 

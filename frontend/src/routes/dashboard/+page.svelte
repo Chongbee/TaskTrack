@@ -215,11 +215,14 @@
 	onMount(async () => {
 		try {
 			tasksLoading = true;
-			await taskHandlers.getTasks();
+			// Replace getTasks() with getMyTasks()
+			if ($authStore.currentUser?.uid && $authStore.currentUser?.tasks) {
+				await taskHandlers.getMyTasks($authStore.currentUser.tasks);
+			}
+			tasksLoading = false;
 			updateMetrics();
 		} catch (error) {
 			console.error('Error loading tasks:', error);
-		} finally {
 			tasksLoading = false;
 		}
 

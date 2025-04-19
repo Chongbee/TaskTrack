@@ -20,10 +20,24 @@ export const authStore = writable({
 
 export const authHandlers = {
 	login: async (email, password) => {
-		await signInWithEmailAndPassword(auth, email, password);
+		try {
+			authStore.update((state) => ({ ...state, isLoading: true }));
+
+			const userCredential = await signInWithEmailAndPassword(auth, email, password);
+			return userCredential.user;
+		} catch (error) {
+			console.error('Login error:', error);
+			authStore.update((state) => ({ ...state, isLoading: false }));
+			throw error;
+		}
 	},
+
 	signup: async (email, password) => {
 		try {
+			// Clear previous data before signup
+			authStore.set({ isLoading: true, currentUser: null });
+			userStore.set({ currentUser: null, isLoading: true });
+
 			const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 			const user = userCredential.user;
 
@@ -31,14 +45,25 @@ export const authHandlers = {
 				await sendEmailVerification(user);
 				await authHandlers.initializeUser(user);
 			}
+			return user;
 		} catch (error) {
-			console.error('Error initializing user:', error);
-			userStore.update((storeData) => ({ ...storeData, currentUser: null, isLoading: false }));
+			console.error('Signup error:', error);
+			authStore.set({ currentUser: null, isLoading: false });
+			userStore.set({ currentUser: null, isLoading: false });
+			throw error;
 		}
 	},
 	logout: async () => {
-		await signOut(auth);
+		try {
+			await signOut(auth);
+			// Only clear auth-related state
+			authStore.set({ isLoading: false, currentUser: null });
+		} catch (error) {
+			console.error('Logout error:', error);
+			throw error;
+		}
 	},
+
 	resetPassword: async (email) => {
 		await sendPasswordResetEmail(auth, email);
 	},
@@ -59,50 +84,39 @@ export const authHandlers = {
 	},
 
 	initializeUser: async (user) => {
-		if (!user) throw new Error('User is not authenticated');
-		const userRef = doc(db, 'users', user.uid);
 		try {
-			const userDoc = await getDoc(userRef);
-			let userData;
+			authStore.update((state) => ({ ...state, isLoading: true }));
 
-			if (userDoc.exists()) {
-				userData = userDoc.data();
-			} else {
-				const profileImage = user.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg';
-				userData = {
-					email: user.email,
-					profileImage,
-					displayName: user.displayName,
-					uid: user.uid,
-					phoneNumber: user.phoneNumber,
-					role: 'user',
-					admin: false,
-					tasks: [],
-					description: '',
-					createdAt: new Date().toISOString()
-				};
-				await setDoc(userRef, userData, { merge: true });
+			const userRef = doc(db, 'users', user.uid);
+			const userDoc = await getDoc(userRef);
+
+			let userData = userDoc.exists()
+				? userDoc.data()
+				: {
+						email: user.email,
+						profileImage: user.photoURL || 'https://i.imgur.com/ucsOFUO.jpeg',
+						tasks: [],
+						createdAt: new Date().toISOString()
+					};
+
+			if (!userDoc.exists()) {
+				await setDoc(userRef, userData);
 			}
 
-			// Merge auth user data with Firestore data
-			const mergedUser = {
-				...user, // Auth data
-				...userData // Firestore data
-			};
-
-			// Update both stores
 			authStore.set({
-				currentUser: mergedUser,
+				currentUser: { ...user, ...userData },
 				isLoading: false
 			});
+
 			userStore.set({
-				currentUser: mergedUser,
+				currentUser: { ...user, ...userData },
 				isLoading: false
 			});
 		} catch (error) {
 			console.error('Error initializing user:', error);
 			authStore.set({ currentUser: null, isLoading: false });
 			userStore.set({ currentUser: null, isLoading: false });
+			throw error;
 		}
 	}
 };

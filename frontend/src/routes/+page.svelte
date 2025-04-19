@@ -45,10 +45,14 @@
 	});
 
 	// Fetch tasks for user when myTasks changes
-	$: if (myTasks.length > 0) {
-		taskHandlers.getMyTasks(myTasks);
+	$: if (userId && myTasks) {
+		if (myTasks.length > 0) {
+			taskHandlers.getMyTasks(myTasks);
+		} else {
+			// Explicitly clear tasks when user has no tasks
+			taskStore.update((state) => ({ ...state, tasks: [], isLoading: false }));
+		}
 	}
-
 	// Subscribe to task store and grab tasks
 	taskStore.subscribe((curr) => {
 		myTasksData = curr?.tasks;
@@ -172,7 +176,7 @@
 		<ViewModeToggle {viewMode} {viewStyle} />
 
 		<div>
-			<AddTaskD />
+			<AddTask />
 		</div>
 	</div>
 </div>
