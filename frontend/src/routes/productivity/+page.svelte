@@ -1,4 +1,5 @@
 <script>
+	//@ts-nocheck
 	import { onMount, onDestroy } from 'svelte';
 	import { taskStore, taskHandlers } from '$lib/stores/taskStore';
 	import { authStore } from '$lib/stores/authStore';

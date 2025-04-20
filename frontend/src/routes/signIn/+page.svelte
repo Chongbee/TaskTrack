@@ -1,4 +1,5 @@
 <script>
+	//@tsn-nocheck
 	import { authHandlers, authStore } from '$lib/stores/authStore';
 	import { goto } from '$app/navigation';
 	let register = false;
@@ -104,6 +105,8 @@
 				</button>
 			</form>
 
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="mt-4 cursor-pointer text-center text-gray-400"
 				on:click={() => {

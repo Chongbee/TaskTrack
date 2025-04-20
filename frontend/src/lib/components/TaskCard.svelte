@@ -1,4 +1,5 @@
 <script>
+	//@ts-nocheck
 	export let task;
 	export let viewStyle = 'default'; // 'default' or 'condensed'
 	export let toggleOptions; // Function to toggle dropdown

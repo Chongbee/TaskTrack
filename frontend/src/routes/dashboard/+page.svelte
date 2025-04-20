@@ -1,4 +1,6 @@
 <script>
+	//@ts-nocheck
+
 	import { onMount, tick } from 'svelte';
 	import { taskStore, taskHandlers } from '$lib/stores/taskStore';
 	import AddTask from '$lib/components/AddTask.svelte';
