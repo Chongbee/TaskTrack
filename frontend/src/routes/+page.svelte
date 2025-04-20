@@ -48,15 +48,12 @@
 	$: if (userId && myTasks) {
 		if (myTasks.length > 0) {
 			taskHandlers.getMyTasks(myTasks);
-		} else {
-			// Explicitly clear tasks when user has no tasks
-			taskStore.update((state) => ({ ...state, tasks: [], isLoading: false }));
 		}
 	}
+
 	// Subscribe to task store and grab tasks
 	taskStore.subscribe((curr) => {
 		myTasksData = curr?.tasks;
-		console.log('tasks', myTasksData);
 	});
 
 	// Group tasks by date
@@ -142,7 +139,7 @@
 				acc[weekNumber].push(task);
 				return acc;
 			}, {});
-			console.log('groupedTasks:', groupedTasks); // Add this line
+			//	console.log('groupedTasks:', groupedTasks); // Add this line
 		}
 	}
 	function toggleOptions(task, event) {

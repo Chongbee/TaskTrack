@@ -44,7 +44,6 @@
 	// Subscribe to task store and grab tasks
 	taskStore.subscribe((curr) => {
 		myTasksData = curr?.tasks;
-		console.log('tasks', myTasksData);
 	});
 
 	// Group tasks by date

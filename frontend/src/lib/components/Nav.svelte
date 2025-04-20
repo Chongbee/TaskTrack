@@ -121,10 +121,6 @@
 	}
 	const logout = () => {
 		authHandlers.logout().then(() => {
-			if (typeof window !== 'undefined') {
-				localStorage.removeItem('searchStore');
-				localStorage.removeItem('selectedServices');
-			}
 			goto('/signIn');
 		});
 	};

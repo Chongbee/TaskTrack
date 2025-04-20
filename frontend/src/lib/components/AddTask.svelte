@@ -91,7 +91,7 @@
 	// Function to undo task addition
 	const undoTaskAddition = async () => {
 		if (lastAddedTaskId && user) {
-			await taskHandlers.deleteTask(user.uid, lastAddedTaskId);
+			await taskHandlers.deleteTask(user.id, lastAddedTaskId);
 			lastAddedTaskId = null;
 			showPopup = false;
 			clearInterval(interval);
@@ -109,9 +109,9 @@
 			isLoading = true; // Show loading state
 
 			// Create the task with all required fields including userId
-			const taskId = await taskHandlers.createTask(user.uid, {
+			const taskId = await taskHandlers.createTask(user.id, {
 				...newTask,
-				userId: user.uid, // Add this line to associate task with user
+				userId: user.id, // Add this line to associate task with user
 				taskStartDate: newTask.taskStartDate || new Date().toISOString(),
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
@@ -119,7 +119,7 @@
 			});
 
 			// Add the task ID to the user's task list
-			await userHandlers.addTaskToUser(user.uid, taskId);
+			await userHandlers.addTaskToUser(user.id, taskId);
 
 			// Reset the task form
 			newTask = {

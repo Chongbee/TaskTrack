@@ -1,7 +1,17 @@
 // @ts-nocheck
 import { writable } from 'svelte/store';
 import { db } from '$lib/firebase/firebase.client';
-import { addDoc, deleteDoc, updateDoc, getDoc, getDocs, collection, doc } from 'firebase/firestore';
+import {
+	addDoc,
+	deleteDoc,
+	updateDoc,
+	getDoc,
+	getDocs,
+	collection,
+	doc,
+	where,
+	query
+} from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { notificationHandlers } from '$lib/stores/notificationStore';
 // Task store state
@@ -14,44 +24,25 @@ export const taskStore = writable({
 // Handlers for task-related operations
 export const taskHandlers = {
 	// Fetch all tasks
-	getTasks: async () => {
+
+	getTasks: async (userId) => {
 		try {
 			const tasksRef = collection(db, 'tasks');
-			const snapshot = await getDocs(tasksRef);
+
+			// Create a query to filter by userId
+			const q = query(tasksRef, where('userId', '==', userId));
+
+			const snapshot = await getDocs(q);
 			const tasks = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
 			// Sort tasks by taskStartDate
 			const sortedTasks = tasks.sort((a, b) => {
 				return new Date(a.taskStartDate) - new Date(b.taskStartDate);
 			});
-
+			console.log('Sorted task inside of my store file 33', sortedTasks);
 			taskStore.set({ isLoading: false, tasks: sortedTasks });
 		} catch (error) {
 			console.error('Error fetching tasks:', error);
-		}
-	},
-
-	// Fetch a single task by ID
-	getTask: async (taskId) => {
-		try {
-			const taskRef = doc(db, 'tasks', taskId);
-			const taskDoc = await getDoc(taskRef);
-			if (taskDoc.exists()) {
-				taskStore.update((state) => ({
-					...state,
-					isLoading: false,
-					currentTask: { id: taskDoc.id, ...taskDoc.data() }
-				}));
-			} else {
-				console.warn(`Task with ID ${taskId} does not exist.`);
-				taskStore.update((state) => ({
-					...state,
-					isLoading: false,
-					currentTask: null
-				}));
-			}
-		} catch (error) {
-			console.error('Error fetching task:', error);
 		}
 	},
 
@@ -90,7 +81,7 @@ export const taskHandlers = {
 			taskStore.update((state) => ({
 				...state,
 				isLoading: false,
-				tasks: sortedTasks
+				tasks: sortedTasks.length > 0 ? sortedTasks : []
 			}));
 		} catch (error) {
 			console.error('Error fetching tasks:', error);
@@ -111,7 +102,6 @@ export const taskHandlers = {
 
 			// Reference to the tasks collection in Firestore
 			const tasksRef = collection(db, `tasks`);
-			console.log(`Saving task for user: ${userId}`, taskData);
 
 			// Add the task to Firestore
 			const newTaskRef = await addDoc(tasksRef, {
