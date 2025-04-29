@@ -108,14 +108,13 @@
 		try {
 			isLoading = true; // Show loading state
 
-			// Create the task with all required fields including userId
 			const taskId = await taskHandlers.createTask(user.id, {
 				...newTask,
-				userId: user.id, // Add this line to associate task with user
+				userId: user.id,
 				taskStartDate: newTask.taskStartDate || new Date().toISOString(),
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
-				completed: false // Ensure default value
+				completed: false
 			});
 
 			// Add the task ID to the user's task list
@@ -166,7 +165,7 @@
 	const saveDuration = () => {
 		if (selectedDuration) {
 			// If a template duration is selected, use the converted format
-			newTask.taskDuration = newTask.taskDuration; // Already in HH:mm format
+			newTask.taskDuration = newTask.taskDuration;
 		} else {
 			// If a custom duration is entered, use it directly
 			newTask.taskDuration = customDuration;

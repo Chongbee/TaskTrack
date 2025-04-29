@@ -9,7 +9,6 @@
 	import { authStore } from '$lib/stores/authStore';
 	import AddTaskD from '$lib/components/AddTaskD.svelte';
 
-	// Chart.js will be loaded dynamically
 	let Chart;
 	let chartInstance = null;
 	let chartLoading = false;
@@ -96,7 +95,6 @@
 		}
 	}
 
-	// Load Chart.js dynamically
 	async function loadChartJS() {
 		try {
 			chartLoading = true;
@@ -119,7 +117,7 @@
 		}
 
 		showAnalyticsModal = true;
-		await tick(); // Wait for the modal to render
+		await tick();
 		initChart();
 	}
 
@@ -138,7 +136,7 @@
 			for (let i = 6; i >= 0; i--) {
 				const date = new Date();
 				date.setDate(date.getDate() - i);
-				days.push(date.toISOString().split('T')[0]); // Format as YYYY-MM-DD
+				days.push(date.toISOString().split('T')[0]);
 			}
 
 			// Count completed tasks per day
@@ -217,7 +215,7 @@
 	onMount(async () => {
 		try {
 			tasksLoading = true;
-			// Replace getTasks() with getMyTasks()
+
 			if ($authStore.currentUser?.uid && $authStore.currentUser?.tasks) {
 				await taskHandlers.getMyTasks($authStore.currentUser.tasks);
 			}

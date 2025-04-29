@@ -6,7 +6,7 @@ import { addDoc, deleteDoc, updateDoc, getDoc, getDocs, collection, doc } from '
 export const userStore = writable({
 	users: [],
 	currentUser: null,
-	isLoading: false // Fixed typo from 'isloading' to 'isLoading'
+	isLoading: false
 });
 
 export const userHandlers = {
