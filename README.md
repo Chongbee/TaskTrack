@@ -9,3 +9,7 @@ Features
 - ✅ **Visual Fidelity**: Faithful recreation of the reference UI (layout, colors, typography).  
 - ✅ **Interactive Elements**: Checkbox toggles, input fields, and buttons.  
 - ✅ **Responsive Design**: Adapts to different screen sizes (if applicable).  
+
+## Screenshots
+![Screenshot (304)](https://github.com/user-attachments/assets/dbe429ba-ef46-4fac-b7f2-318ce4dc9c73)
+![Screenshot (303)](https://github.com/user-attachments/assets/5142b767-0de9-4083-b3f5-da57bae47818)
